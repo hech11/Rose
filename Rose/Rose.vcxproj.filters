@@ -1592,6 +1592,7 @@
     </ClInclude>
     <ClInclude Include="src\Rose\Core\Application.h" />
     <ClInclude Include="src\Rose\Core\Log.h" />
+    <ClInclude Include="src\Rose\Renderer\Shader.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="vendor\imgui\backends\imgui_impl_vulkan.cpp">
@@ -1613,5 +1614,6 @@
       <Filter>vendor\imgui</Filter>
     </ClCompile>
     <ClCompile Include="src\Rose\Core\Application.cpp" />
+    <ClCompile Include="src\Rose\Renderer\Shader.cpp" />
   </ItemGroup>
 </Project>

@@ -4,3 +4,4 @@
 
 
 #define LOG(x) printf(x)
+#define ASSERT() __debugbreak()
