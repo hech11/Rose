@@ -1,7 +1,13 @@
-#include "Rose/Test.h"
+#include "Rose/Core/Application.h"
 
 
 int main()
 {
-	Rose::Test();
+	using namespace Rose;
+
+
+	Application* app = new Application;
+	app->Run();
+
+	delete app;
 }

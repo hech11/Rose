@@ -81,9 +81,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\Rose\Test.h">
-      <Filter>src\Rose</Filter>
-    </ClInclude>
     <ClInclude Include="vendor\glm\glm\common.hpp">
       <Filter>vendor\glm\glm</Filter>
     </ClInclude>
@@ -1593,11 +1590,10 @@
     <ClInclude Include="vendor\vulkan1.2.182.0\include\Vulkan\vulkan\vulkan_xlib_xrandr.h">
       <Filter>vendor\vulkan1.2.182.0\include\Vulkan\vulkan</Filter>
     </ClInclude>
+    <ClInclude Include="src\Rose\Core\Application.h" />
+    <ClInclude Include="src\Rose\Core\Log.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\Rose\Test.cpp">
-      <Filter>src\Rose</Filter>
-    </ClCompile>
     <ClCompile Include="vendor\imgui\backends\imgui_impl_vulkan.cpp">
       <Filter>vendor\imgui\backends</Filter>
     </ClCompile>
@@ -1616,5 +1612,6 @@
     <ClCompile Include="vendor\imgui\imgui_widgets.cpp">
       <Filter>vendor\imgui</Filter>
     </ClCompile>
+    <ClCompile Include="src\Rose\Core\Application.cpp" />
   </ItemGroup>
 </Project>
