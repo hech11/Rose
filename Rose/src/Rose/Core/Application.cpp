@@ -75,7 +75,6 @@ namespace Rose
 		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
 		createInfo.pApplicationInfo = &appInfo;
 
-		uint32_t extensionCount = 0;
 
 
 		uint32_t glfwExtensionCount = 0;
@@ -86,12 +85,16 @@ namespace Rose
 		createInfo.enabledExtensionCount = glfwExtensionCount;
 		createInfo.ppEnabledExtensionNames = glfwExtensions;
 		
-		createInfo.enabledLayerCount = 0;
+		createInfo.enabledLayerCount = (uint32_t)m_ValidationLayerNames.size();
+		createInfo.ppEnabledLayerNames = m_ValidationLayerNames.data();
 
 		VkResult result = vkCreateInstance(&createInfo, nullptr, &m_VKInstance);
 		if (result != VK_SUCCESS) {
 			printf("Failed to create VK instance!\n");
 		}
+
+
+		uint32_t extensionCount = 0;
 		std::vector<VkExtensionProperties> extensions(extensionCount);
 		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
 		LOG("available extensions:\n");
@@ -99,6 +102,36 @@ namespace Rose
 		for (const auto& extension : extensions) {
 			printf("\t%s\n", extension.extensionName);
 		}
+
+	}
+
+	bool Application::CheckValidationLayerSupport()
+	{
+		uint32_t count;
+		vkEnumerateInstanceLayerProperties(&count, nullptr);
+
+		std::vector<VkLayerProperties> actualLayers;
+		vkEnumerateInstanceLayerProperties(&count, actualLayers.data());
+
+
+		for(const auto& name : m_ValidationLayerNames)
+		{
+			bool found = false;
+			for (const auto& props : actualLayers)
+			{
+				if (!strcmp(name, props.description))
+				{
+					found = true;
+					break;
+				}
+			}
+
+			if (!found)
+				return false;
+
+		}
+
+		return true;
 
 	}
 
