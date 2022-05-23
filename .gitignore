@@ -1,3 +1,4 @@
+.vs/
 bin/
 bin-int/
 
@@ -6,3 +7,4 @@ bin-int/
 *.sln
 *.vcxproj
 *.vcxproj.user
+*.vcxproj.filters
