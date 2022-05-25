@@ -1,6 +1,7 @@
 #pragma once
 
-#include <vulkan1.2.182.0/include/Vulkan/vulkan/vulkan.h>
+#include <vulkan1.2.182.0/include/Vulkan/vulkan/vulkan.h>]
+#include <vector>
 
 struct GLFWwindow;
 namespace Rose
@@ -28,11 +29,17 @@ namespace Rose
 		private :
 			void CreateWindow();
 			void CreateVulkanInstance();
+			bool CheckValidationLayerSupport();
 			void CleanUp();
 
 		private :
 			GLFWwindow* m_Window = nullptr;
 			VkInstance m_VKInstance;
+
+			const std::vector<const char*> m_ValidationLayerNames = {
+				"VK_LAYER_KHRONOS_validation"
+			};
+
 
 	};
 }
