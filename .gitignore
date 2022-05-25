@@ -1,7 +1,11 @@
 .vs/
-bin/
-bin-int/
+/bin
+/Rose/vendor/glfw/bin/
+/Rose/vendor/glfw/bin-int/
+/bin-int
 
+
+!/Rose/vendor/glm/
 
 *.vs
 *.sln
