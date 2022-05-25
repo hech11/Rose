@@ -9,6 +9,36 @@
 namespace Rose
 {
 
+
+	namespace callbacks
+	{
+
+
+		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugMSGRCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
+			const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) 
+		{
+			LOG("validation layer: %s\n");
+			return VK_FALSE;
+		}
+
+		static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
+			auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
+			if (func != nullptr) {
+				return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
+			}
+			else {
+				return VK_ERROR_EXTENSION_NOT_PRESENT;
+			}
+		}
+
+		static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
+			auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
+			if (func != nullptr) {
+				func(instance, debugMessenger, pAllocator);
+			}
+		}
+	}
+
 	Application::Application()
 	{
 
@@ -76,19 +106,31 @@ namespace Rose
 		createInfo.pApplicationInfo = &appInfo;
 
 
+		auto ext = GetRequiredExtensions();
 
-		uint32_t glfwExtensionCount = 0;
-		const char** glfwExtensions;
-
-		glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-		createInfo.enabledExtensionCount = glfwExtensionCount;
-		createInfo.ppEnabledExtensionNames = glfwExtensions;
 		
+		createInfo.enabledExtensionCount = ext.size();
+		createInfo.ppEnabledExtensionNames = ext.data();
+		
+
 		createInfo.enabledLayerCount = (uint32_t)m_ValidationLayerNames.size();
 		createInfo.ppEnabledLayerNames = m_ValidationLayerNames.data();
 
+
+		VkDebugUtilsMessengerCreateInfoEXT debugInfo{};
+
+		debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
+		debugInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
+		debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
+		debugInfo.pfnUserCallback = callbacks::DebugMSGRCallback;
+
+		//callbacks::CreateDebugUtilsMessengerEXT(m_VKInstance, &debugInfo, nullptr, &m_DebugMessagerCallback);
+		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugInfo;
+
+
+
 		VkResult result = vkCreateInstance(&createInfo, nullptr, &m_VKInstance);
+
 		if (result != VK_SUCCESS) {
 			printf("Failed to create VK instance!\n");
 		}
@@ -103,6 +145,8 @@ namespace Rose
 			printf("\t%s\n", extension.extensionName);
 		}
 
+
+		
 	}
 
 	bool Application::CheckValidationLayerSupport()
@@ -138,10 +182,34 @@ namespace Rose
 	void Application::CleanUp()
 	{
 
+		callbacks::DestroyDebugUtilsMessengerEXT(m_VKInstance, m_DebugMessagerCallback, nullptr);
+
 		vkDestroyInstance(m_VKInstance, nullptr);
 
 		glfwDestroyWindow(m_Window);
 		glfwTerminate();
+	}
+
+	void Application::InitCallbacks()
+	{
+
+	
+
+	}
+
+	std::vector<const char*> Application::GetRequiredExtensions()
+	{
+		uint32_t glfwExtensionCount = 0;
+		const char** glfwExtensions;
+
+		glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
+
+		std::vector<const char*> result(glfwExtensions, glfwExtensions + glfwExtensionCount);
+
+		result.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+
+		return result;
+
 	}
 
 }
