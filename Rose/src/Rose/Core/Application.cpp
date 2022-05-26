@@ -17,7 +17,9 @@ namespace Rose
 		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugMSGRCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
 			const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) 
 		{
-			LOG("validation layer: %s: %s\n", pCallbackData->pMessageIdName, pCallbackData->pMessage);
+
+			if(messageSeverity == VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
+				LOG("validation layer: %s: %s\n", pCallbackData->pMessageIdName, pCallbackData->pMessage);	
 			return VK_FALSE;
 		}
 
@@ -44,6 +46,8 @@ namespace Rose
 
 		CreateWindow();
 		CreateVulkanInstance();
+		ChoosePhysicalDevice();
+		
 	}
 
 	Application::~Application()
@@ -113,6 +117,7 @@ namespace Rose
 		createInfo.ppEnabledExtensionNames = ext.data();
 		
 
+
 		createInfo.enabledLayerCount = (uint32_t)m_ValidationLayerNames.size();
 		createInfo.ppEnabledLayerNames = m_ValidationLayerNames.data();
 
@@ -178,23 +183,80 @@ namespace Rose
 
 	}
 
+	void Application::ChoosePhysicalDevice()
+	{
+		uint32_t physicalDeviceCount;
+		vkEnumeratePhysicalDevices(m_VKInstance, &physicalDeviceCount, nullptr);
+
+		std::vector<VkPhysicalDevice> devices(physicalDeviceCount);
+		vkEnumeratePhysicalDevices(m_VKInstance, &physicalDeviceCount, devices.data());
+
+
+		m_VKPhysicalDevice = devices[0]; // not great
+		//validate if the device is useable?
+
+
+		// check features once added new API calls to vulkan
+		VkPhysicalDeviceFeatures deviceFeatures{};
+
+		VkPhysicalDeviceProperties deviceProps;
+		vkGetPhysicalDeviceProperties(devices[0], &deviceProps);
+
+		// print info about the device props here
+
+		//  find queue family 
+
+		uint32_t queueFamilyCount = 0;
+		vkGetPhysicalDeviceQueueFamilyProperties(m_VKPhysicalDevice, &queueFamilyCount, nullptr);
+
+		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
+		vkGetPhysicalDeviceQueueFamilyProperties(m_VKPhysicalDevice, &queueFamilyCount, queueFamilies.data());
+
+		uint32_t graphicsFamily;
+
+		int i = 0;
+		for (const auto& queueFamily : queueFamilies) {
+			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
+				graphicsFamily = i;
+			}
+
+			i++;
+		}
+
+		// logical devices
+
+		float queuePriority = 1.0f;
+
+		VkDeviceQueueCreateInfo queueCreateInfo{};
+		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+		queueCreateInfo.queueFamilyIndex = graphicsFamily;
+		queueCreateInfo.queueCount = 1;
+		queueCreateInfo.pQueuePriorities = &queuePriority;
+
+		VkDeviceCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+
+		createInfo.pQueueCreateInfos = &queueCreateInfo;
+		createInfo.pEnabledFeatures = &deviceFeatures;
+		createInfo.queueCreateInfoCount = 1;
+
+		vkCreateDevice(m_VKPhysicalDevice, &createInfo, nullptr, &m_VKLogicalDebice);
+		vkGetDeviceQueue(m_VKLogicalDebice, graphicsFamily, 0, &m_RenderingQueue);
+
+	}
+
 	void Application::CleanUp()
 	{
 
 		callbacks::DestroyDebugUtilsMessengerEXT(m_VKInstance, m_DebugMessagerCallback, nullptr);
 
+		vkDestroyDevice(m_VKLogicalDebice, nullptr);
 		vkDestroyInstance(m_VKInstance, nullptr);
 
 		glfwDestroyWindow(m_Window);
 		glfwTerminate();
 	}
 
-	void Application::InitCallbacks()
-	{
-
-	
-
-	}
 
 	std::vector<const char*> Application::GetRequiredExtensions()
 	{

@@ -30,15 +30,22 @@ namespace Rose
 			void CreateWindow();
 			void CreateVulkanInstance();
 			bool CheckValidationLayerSupport();
+
+			void ChoosePhysicalDevice();
+
 			void CleanUp();
 
-			void InitCallbacks();
 
 			std::vector<const char*> GetRequiredExtensions();
 
 		private :
 			GLFWwindow* m_Window = nullptr;
 			VkInstance m_VKInstance;
+			VkPhysicalDevice m_VKPhysicalDevice = VK_NULL_HANDLE;
+			VkDevice m_VKLogicalDebice;
+			VkQueue m_RenderingQueue;
+
+
 			VkDebugUtilsMessengerEXT m_DebugMessagerCallback;
 
 			const std::vector<const char*> m_ValidationLayerNames = {
