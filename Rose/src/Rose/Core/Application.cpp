@@ -1,7 +1,8 @@
 #include "Application.h"
 
 #include "Log.h"
-#include <glfw/glfw3.h>
+
+
 #include <vector>
 
 
@@ -44,8 +45,12 @@ namespace Rose
 	Application::Application()
 	{
 
-		CreateWindow();
+
+		MakeWindow();
 		CreateVulkanInstance();
+		CreateWinGLFWSurface();
+
+
 		ChoosePhysicalDevice();
 		
 	}
@@ -78,7 +83,7 @@ namespace Rose
 
 	}
 
-	void Application::CreateWindow()
+	void Application::MakeWindow()
 	{
 		if (!glfwInit())
 		{
@@ -245,12 +250,26 @@ namespace Rose
 
 	}
 
+	void Application::CreateWinGLFWSurface()
+	{
+		VkWin32SurfaceCreateInfoKHR createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+		createInfo.hwnd = glfwGetWin32Window(m_Window);
+		createInfo.hinstance = GetModuleHandle(nullptr);
+
+		vkCreateWin32SurfaceKHR(m_VKInstance, &createInfo, nullptr, &m_VKWinSurface);
+
+//		glfwCreateWindowSurface(m_VKInstance, m_Window, nullptr, &m_VKWinSurface);
+	}
+
 	void Application::CleanUp()
 	{
 
 		callbacks::DestroyDebugUtilsMessengerEXT(m_VKInstance, m_DebugMessagerCallback, nullptr);
 
 		vkDestroyDevice(m_VKLogicalDebice, nullptr);
+
+		vkDestroySurfaceKHR(m_VKInstance, m_VKWinSurface, nullptr);
 		vkDestroyInstance(m_VKInstance, nullptr);
 
 		glfwDestroyWindow(m_Window);

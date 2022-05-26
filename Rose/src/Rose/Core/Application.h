@@ -1,9 +1,15 @@
 #pragma once
 
-#include <vulkan1.2.182.0/include/Vulkan/vulkan/vulkan.h>]
+
+#define VK_USE_PLATFORM_WIN32_KHR
+#define GLFW_INCLUDE_VULKAN
+#include <GLFW/glfw3.h>
+#define GLFW_EXPOSE_NATIVE_WIN32
+#include <GLFW/glfw3native.h>
+
+
 #include <vector>
 
-struct GLFWwindow;
 namespace Rose
 {
 
@@ -27,11 +33,13 @@ namespace Rose
 
 
 		private :
-			void CreateWindow();
+			void MakeWindow();
 			void CreateVulkanInstance();
 			bool CheckValidationLayerSupport();
 
 			void ChoosePhysicalDevice();
+
+			void CreateWinGLFWSurface();
 
 			void CleanUp();
 
@@ -47,6 +55,8 @@ namespace Rose
 
 
 			VkDebugUtilsMessengerEXT m_DebugMessagerCallback;
+			VkSurfaceKHR m_VKWinSurface;
+
 
 			const std::vector<const char*> m_ValidationLayerNames = {
 				"VK_LAYER_KHRONOS_validation"
