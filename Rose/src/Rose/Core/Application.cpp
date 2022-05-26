@@ -17,7 +17,7 @@ namespace Rose
 		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugMSGRCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
 			const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) 
 		{
-			LOG("validation layer: %s\n");
+			LOG("validation layer: %s: %s\n", pCallbackData->pMessageIdName, pCallbackData->pMessage);
 			return VK_FALSE;
 		}
 
@@ -124,12 +124,11 @@ namespace Rose
 		debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
 		debugInfo.pfnUserCallback = callbacks::DebugMSGRCallback;
 
-		//callbacks::CreateDebugUtilsMessengerEXT(m_VKInstance, &debugInfo, nullptr, &m_DebugMessagerCallback);
 		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugInfo;
-
-
-
 		VkResult result = vkCreateInstance(&createInfo, nullptr, &m_VKInstance);
+
+
+		callbacks::CreateDebugUtilsMessengerEXT(m_VKInstance, &debugInfo, nullptr, &m_DebugMessagerCallback);
 
 		if (result != VK_SUCCESS) {
 			printf("Failed to create VK instance!\n");
