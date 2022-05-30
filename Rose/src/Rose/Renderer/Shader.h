@@ -58,6 +58,9 @@ namespace Rose
 
 			void DestroyPipeline();
 
+			const VkPipeline& GetGrahpicsPipeline() const { return m_GraphicsPipeline; }
+			VkPipeline& GetGrahpicsPipeline() { return m_GraphicsPipeline; }
+
 			const VkRenderPass& GetRenderPass() const { return m_RenderPass; }
 			VkRenderPass& GetRenderPass() { return m_RenderPass; }
 

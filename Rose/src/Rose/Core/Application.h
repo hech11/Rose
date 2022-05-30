@@ -9,6 +9,7 @@
 
 
 #include <vector>
+#include <optional>
 #include <memory>
 #include "Rose/Renderer/Shader.h"
 
@@ -60,6 +61,11 @@ namespace Rose
 			void CreateGraphicsPipeline();
 			void CreateFramebuffers();
 
+			void CreateCommandPoolAndBuffer();
+			void RecordCommandBuffer();
+
+
+			void DrawOntoScreen();
 
 			SwapChainDetails QuerySwapChainSupport(VkPhysicalDevice device);
 
@@ -82,6 +88,9 @@ namespace Rose
 			VkDevice m_VKLogicalDevice;
 			VkQueue m_RenderingQueue;
 
+			std::optional<uint32_t> graphicsFamily;
+			std::optional<uint32_t> presentFamily;
+
 			VkSwapchainKHR m_SwapChain;
 			std::vector<VkImage> m_SwapChainImages;
 			std::vector<VkImageView> m_SwapChainImageViews;
@@ -89,6 +98,10 @@ namespace Rose
 			VkExtent2D m_SwapChainExtent;
 
 			std::vector<VkFramebuffer> m_Framebuffers;
+
+			VkCommandPool m_VKCommandPool;
+			VkCommandBuffer m_VKCommandBuffer;
+
 
 			std::shared_ptr<Shader> m_Shader;
 

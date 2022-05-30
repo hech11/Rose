@@ -5,7 +5,6 @@
 
 #include <vector>
 #include <set>
-#include <optional>
 #include <algorithm>
 #include <stdexcept>
 
@@ -64,6 +63,8 @@ namespace Rose
 
 		CreateGraphicsPipeline();
 		CreateFramebuffers();
+		CreateCommandPoolAndBuffer();
+
 
 	}
 
@@ -79,9 +80,11 @@ namespace Rose
 		{
 
 			glfwPollEvents();
-			glfwSwapBuffers(m_Window);
+			DrawOntoScreen();
 
 		}
+
+		vkDeviceWaitIdle(m_VKLogicalDevice);
 	}
 
 	const GLFWwindow* Application::GetWindow() const
@@ -229,8 +232,7 @@ namespace Rose
 		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 		vkGetPhysicalDeviceQueueFamilyProperties(m_VKPhysicalDevice, &queueFamilyCount, queueFamilies.data());
 
-		std::optional<uint32_t> graphicsFamily;
-		std::optional<uint32_t> presentFamily;
+		
 
 		int i = 0;
 		for (const auto& queueFamily : queueFamilies) {
@@ -411,6 +413,57 @@ namespace Rose
 		}
 	}
 
+	void Application::CreateCommandPoolAndBuffer()
+	{
+		VkCommandPoolCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		createInfo.queueFamilyIndex = graphicsFamily.value();
+
+		vkCreateCommandPool(m_VKLogicalDevice, &createInfo, nullptr, &m_VKCommandPool);
+
+		VkCommandBufferAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.commandPool = m_VKCommandPool;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandBufferCount = 1;
+		vkAllocateCommandBuffers(m_VKLogicalDevice, &allocInfo, &m_VKCommandBuffer);
+
+
+	}
+
+	void Application::RecordCommandBuffer()
+	{
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+
+		vkBeginCommandBuffer(m_VKCommandBuffer, &beginInfo);
+
+		VkRenderPassBeginInfo renderPassInfo{};
+		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+		renderPassInfo.renderPass = m_Shader->GetRenderPass();
+		renderPassInfo.framebuffer = m_Framebuffers[0];
+		renderPassInfo.renderArea.offset = { 0, 0 };
+		renderPassInfo.renderArea.extent = m_SwapChainExtent;
+
+		VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
+		renderPassInfo.clearValueCount = 1;
+		renderPassInfo.pClearValues = &clearColor;
+
+		vkCmdBeginRenderPass(m_VKCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+		vkCmdBindPipeline(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Shader->GetGrahpicsPipeline());
+
+		vkCmdEndRenderPass(m_VKCommandBuffer);
+		vkEndCommandBuffer(m_VKCommandBuffer);
+
+	}
+
+	void Application::DrawOntoScreen()
+	{
+		//glfwSwapBuffers(m_Window);
+	}
+
 	SwapChainDetails Application::QuerySwapChainSupport(VkPhysicalDevice device)
 	{
 	    SwapChainDetails result;
@@ -493,6 +546,9 @@ namespace Rose
 	{
 
 		callbacks::DestroyDebugUtilsMessengerEXT(m_VKInstance, m_DebugMessagerCallback, nullptr);
+
+
+		vkDestroyCommandPool(m_VKLogicalDevice, m_VKCommandPool, nullptr);
 
 		m_Shader->DestroyPipeline();
 
