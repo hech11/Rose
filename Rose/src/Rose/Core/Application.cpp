@@ -64,6 +64,7 @@ namespace Rose
 		CreateGraphicsPipeline();
 		CreateFramebuffers();
 		CreateCommandPoolAndBuffer();
+		CreateSyncObjs();
 
 
 	}
@@ -432,7 +433,23 @@ namespace Rose
 
 	}
 
-	void Application::RecordCommandBuffer()
+	void Application::CreateSyncObjs()
+	{
+		VkSemaphoreCreateInfo semaphoreInfo{};
+		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		VkFenceCreateInfo fenceInfo{};
+		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+		vkCreateSemaphore(m_VKLogicalDevice, &semaphoreInfo, nullptr, &m_ImageReadySemaphore);
+		vkCreateSemaphore(m_VKLogicalDevice, &semaphoreInfo, nullptr, &m_RenderFinishedSemaphore);
+		vkCreateFence(m_VKLogicalDevice, &fenceInfo, nullptr, &m_FramesInFlightFence);
+
+
+	}
+
+	void Application::RecordCommandBuffer(uint32_t imageIndex)
 	{
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -442,7 +459,7 @@ namespace Rose
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
 		renderPassInfo.renderPass = m_Shader->GetRenderPass();
-		renderPassInfo.framebuffer = m_Framebuffers[0];
+		renderPassInfo.framebuffer = m_Framebuffers[imageIndex];
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = m_SwapChainExtent;
 
@@ -454,6 +471,8 @@ namespace Rose
 
 		vkCmdBindPipeline(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Shader->GetGrahpicsPipeline());
 
+		vkCmdDraw(m_VKCommandBuffer, 3, 1, 0, 0);
+
 		vkCmdEndRenderPass(m_VKCommandBuffer);
 		vkEndCommandBuffer(m_VKCommandBuffer);
 
@@ -461,7 +480,47 @@ namespace Rose
 
 	void Application::DrawOntoScreen()
 	{
-		//glfwSwapBuffers(m_Window);
+		vkWaitForFences(m_VKLogicalDevice, 1, &m_FramesInFlightFence, VK_TRUE, UINT64_MAX);
+		vkResetFences(m_VKLogicalDevice, 1, &m_FramesInFlightFence);
+
+		uint32_t imageIndex;
+		vkAcquireNextImageKHR(m_VKLogicalDevice, m_SwapChain, UINT64_MAX, m_ImageReadySemaphore, VK_NULL_HANDLE, &imageIndex);
+		vkResetCommandBuffer(m_VKCommandBuffer, 0);
+
+		RecordCommandBuffer(imageIndex);
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+		VkSemaphore waitSemaphores[] = { m_ImageReadySemaphore };
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = waitSemaphores;
+		submitInfo.pWaitDstStageMask = waitStages;
+
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &m_VKCommandBuffer;
+
+		VkSemaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = signalSemaphores;
+
+		vkQueueSubmit(m_RenderingQueue, 1, &submitInfo, m_FramesInFlightFence);
+
+		VkPresentInfoKHR presentInfo{};
+		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+
+		presentInfo.waitSemaphoreCount = 1;
+		presentInfo.pWaitSemaphores = signalSemaphores;
+
+		VkSwapchainKHR swapChains[] = { m_SwapChain };
+		presentInfo.swapchainCount = 1;
+		presentInfo.pSwapchains = swapChains;
+
+		presentInfo.pImageIndices = &imageIndex;
+
+		vkQueuePresentKHR(m_RenderingQueue, &presentInfo);
+
 	}
 
 	SwapChainDetails Application::QuerySwapChainSupport(VkPhysicalDevice device)
@@ -547,6 +606,11 @@ namespace Rose
 
 		callbacks::DestroyDebugUtilsMessengerEXT(m_VKInstance, m_DebugMessagerCallback, nullptr);
 
+
+
+		vkDestroySemaphore(m_VKLogicalDevice, m_ImageReadySemaphore, nullptr);
+		vkDestroySemaphore(m_VKLogicalDevice, m_RenderFinishedSemaphore, nullptr);
+		vkDestroyFence(m_VKLogicalDevice, m_FramesInFlightFence, nullptr);
 
 		vkDestroyCommandPool(m_VKLogicalDevice, m_VKCommandPool, nullptr);
 

@@ -62,7 +62,9 @@ namespace Rose
 			void CreateFramebuffers();
 
 			void CreateCommandPoolAndBuffer();
-			void RecordCommandBuffer();
+			void CreateSyncObjs();
+
+			void RecordCommandBuffer(uint32_t imageIndex);
 
 
 			void DrawOntoScreen();
@@ -97,11 +99,14 @@ namespace Rose
 			VkFormat m_SwapChainImageFormat;
 			VkExtent2D m_SwapChainExtent;
 
+
 			std::vector<VkFramebuffer> m_Framebuffers;
 
 			VkCommandPool m_VKCommandPool;
 			VkCommandBuffer m_VKCommandBuffer;
 
+			VkSemaphore m_ImageReadySemaphore, m_RenderFinishedSemaphore;
+			VkFence m_FramesInFlightFence;
 
 			std::shared_ptr<Shader> m_Shader;
 
