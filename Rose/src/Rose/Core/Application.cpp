@@ -45,12 +45,14 @@ namespace Rose
 		}
 	}
 
+	Application* Application::s_INSTANCE = nullptr;
+
 
 
 	
 	Application::Application()
 	{
-
+		s_INSTANCE = this;
 
 		MakeWindow();
 		CreateVulkanInstance();
@@ -61,6 +63,8 @@ namespace Rose
 		CreateImageViews();
 
 		CreateGraphicsPipeline();
+		CreateFramebuffers();
+
 	}
 
 	Application::~Application()
@@ -384,6 +388,29 @@ namespace Rose
 
 	}
 
+	void Application::CreateFramebuffers()
+	{
+		m_Framebuffers.resize(m_SwapChainImageViews.size());
+
+		for (size_t i = 0; i < m_SwapChainImageViews.size(); i++) {
+			VkImageView attachments[] = {
+				m_SwapChainImageViews[i]
+			};
+
+			VkFramebufferCreateInfo framebufferInfo{};
+			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+			framebufferInfo.renderPass = m_Shader->GetRenderPass();
+			framebufferInfo.attachmentCount = 1;
+			framebufferInfo.pAttachments = attachments;
+			framebufferInfo.width = m_SwapChainExtent.width;
+			framebufferInfo.height = m_SwapChainExtent.height;
+			framebufferInfo.layers = 1;
+
+			vkCreateFramebuffer(m_VKLogicalDevice, &framebufferInfo, nullptr, &m_Framebuffers[i]);
+
+		}
+	}
+
 	SwapChainDetails Application::QuerySwapChainSupport(VkPhysicalDevice device)
 	{
 	    SwapChainDetails result;
@@ -467,6 +494,11 @@ namespace Rose
 
 		callbacks::DestroyDebugUtilsMessengerEXT(m_VKInstance, m_DebugMessagerCallback, nullptr);
 
+		m_Shader->DestroyPipeline();
+
+		for (auto fb : m_Framebuffers) {
+			vkDestroyFramebuffer(m_VKLogicalDevice, fb, nullptr);
+		}
 
 		for (auto view : m_SwapChainImageViews) {
 			vkDestroyImageView(m_VKLogicalDevice, view, nullptr);
@@ -499,4 +531,4 @@ namespace Rose
 
 	}
 
-}
+	}

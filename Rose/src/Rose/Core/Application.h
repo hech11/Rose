@@ -30,6 +30,7 @@ namespace Rose
 			Application();
 			~Application();
 
+
 			void Run();
 
 
@@ -44,8 +45,7 @@ namespace Rose
 		public :
 
 			static Application& Get() {
-				static Application INSTANCE;
-				return INSTANCE;
+				return *s_INSTANCE;
 			}
 
 
@@ -58,6 +58,8 @@ namespace Rose
 			void CreateImageViews();
 
 			void CreateGraphicsPipeline();
+			void CreateFramebuffers();
+
 
 			SwapChainDetails QuerySwapChainSupport(VkPhysicalDevice device);
 
@@ -86,6 +88,8 @@ namespace Rose
 			VkFormat m_SwapChainImageFormat;
 			VkExtent2D m_SwapChainExtent;
 
+			std::vector<VkFramebuffer> m_Framebuffers;
+
 			std::shared_ptr<Shader> m_Shader;
 
 			VkDebugUtilsMessengerEXT m_DebugMessagerCallback;
@@ -96,6 +100,7 @@ namespace Rose
 				"VK_LAYER_KHRONOS_validation",
 			};
 
+			static Application* s_INSTANCE;
 
 	};
 }

@@ -56,18 +56,18 @@ namespace Rose
 		CreateShaderStagePipeline();
 		for (auto&& [type, module] : m_ShaderModules)
 		{
-			//vkDestroyShaderModule(, module, nullptr); //TODO: Create vk devide first!
+			vkDestroyShaderModule(Application::Get().GetLogicalDevice(), module, nullptr);
 		}
 
 	}
 
 	Shader::~Shader()
 	{
-
 	}
 
 	void Shader::DestroyPipeline()
 	{
+		vkDestroyPipeline(Application::Get().GetLogicalDevice(), m_GraphicsPipeline, nullptr);
 		vkDestroyPipelineLayout(Application::Get().GetLogicalDevice(), m_PipelineLayout, nullptr);
 		vkDestroyRenderPass(Application::Get().GetLogicalDevice(), m_RenderPass, nullptr);
 	}
@@ -123,12 +123,12 @@ namespace Rose
 		shaderc::Compiler compiler;
 		shaderc::CompileOptions options;
 		options.SetTargetEnvironment(shaderc_target_env_vulkan, shaderc_env_version_vulkan_1_2);
-		//options.SetOptimizationLevel(shaderc_optimization_level_performance);
+		options.SetOptimizationLevel(shaderc_optimization_level_performance);
 
 		
 		for (auto&& [type, source] : m_UncompiledShaderSources)
 		{
-			
+
 
 			shaderc::SpvCompilationResult results = compiler.CompileGlslToSpv(source, Utils::FromVKShaderTypeToSPIRV(type), m_Name.c_str());
 
@@ -137,7 +137,7 @@ namespace Rose
 				LOG("%s\n", results.GetErrorMessage().c_str());
 			}
 
-			m_CompiledShaderSources[type] = std::vector<uint32_t>(results.cbegin(), results.cbegin());
+			m_CompiledShaderSources[type] = std::vector<uint32_t>(results.cbegin(), results.cend());
 		}
 
 	}
@@ -146,7 +146,7 @@ namespace Rose
 	{
 		VkShaderModuleCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-		createInfo.codeSize = sprvCode.size();
+		createInfo.codeSize = sprvCode.size()*sizeof(uint32_t);
 		createInfo.pCode = sprvCode.data();
 
 		VkShaderModule result;
@@ -161,7 +161,7 @@ namespace Rose
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 		for (auto&& [type, module] : m_ShaderModules)
 		{
-			VkPipelineShaderStageCreateInfo stageInfo;
+			VkPipelineShaderStageCreateInfo stageInfo{};
 			stageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 			stageInfo.stage = Utils::DeduceShaderStageFromType(type);
 			stageInfo.pName = "main";
@@ -258,12 +258,6 @@ namespace Rose
 
 		vkCreatePipelineLayout(Application::Get().GetLogicalDevice(), &pipelineLayoutInfo, nullptr, &m_PipelineLayout);
 		
-
-
-	}
-
-	void Shader::CreateRenderPass()
-	{
 		VkAttachmentDescription colorAttachment{};
 		colorAttachment.format = Application::Get().GetSwapChainImageFormat();
 		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
@@ -292,7 +286,33 @@ namespace Rose
 
 
 		vkCreateRenderPass(Application::Get().GetLogicalDevice(), &renderPassInfo, nullptr, &m_RenderPass);
+
+
+
+		VkGraphicsPipelineCreateInfo pipelineInfo{};
+		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
+		pipelineInfo.stageCount = 2;
+		pipelineInfo.pStages = shaderStages.data();
+
+		pipelineInfo.pVertexInputState = &vertexInputInfo;
+		pipelineInfo.pInputAssemblyState = &inputAssembly;
+		pipelineInfo.pViewportState = &viewportState;
+		pipelineInfo.pRasterizationState = &rasterizer;
+		pipelineInfo.pMultisampleState = &multisampling;
+		pipelineInfo.pDepthStencilState = nullptr;
+		pipelineInfo.pColorBlendState = &colorBlending;
+		pipelineInfo.pDynamicState = nullptr;
+
+		pipelineInfo.layout = m_PipelineLayout;
+		pipelineInfo.renderPass = m_RenderPass;
+		pipelineInfo.subpass = 0;
+		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
+		pipelineInfo.basePipelineIndex = -1;
+
+		vkCreateGraphicsPipelines(Application::Get().GetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_GraphicsPipeline);
 	}
+
+	
 
 	void Shader::Reflect()
 	{

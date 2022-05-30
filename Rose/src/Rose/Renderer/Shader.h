@@ -58,6 +58,9 @@ namespace Rose
 
 			void DestroyPipeline();
 
+			const VkRenderPass& GetRenderPass() const { return m_RenderPass; }
+			VkRenderPass& GetRenderPass() { return m_RenderPass; }
+
 		private :
 			void ParseShaders(const std::string& filepath);
 
@@ -65,7 +68,6 @@ namespace Rose
 			VkShaderModule CreateModule(const std::vector<uint32_t>& sprvCode);
 
 			void CreateShaderStagePipeline();
-			void CreateRenderPass();
 
 			void Reflect();
 
@@ -77,6 +79,7 @@ namespace Rose
 			std::unordered_map <ShaderModuleTypes, std::vector<uint32_t>> m_CompiledShaderSources;
 			std::unordered_map <ShaderModuleTypes, VkShaderModule> m_ShaderModules;
 
+			VkPipeline m_GraphicsPipeline;
 			VkPipelineLayout m_PipelineLayout;
 			VkRenderPass m_RenderPass;
 
