@@ -13,6 +13,15 @@
 namespace Rose
 {
 
+
+	struct SwapChainDetails {
+		VkSurfaceCapabilitiesKHR Capabilities;
+		std::vector<VkSurfaceFormatKHR> Formats;
+		std::vector<VkPresentModeKHR> PresentModes;
+	};
+
+
+
 	class Application
 	{
 		public :
@@ -38,6 +47,14 @@ namespace Rose
 			bool CheckValidationLayerSupport();
 
 			void ChoosePhysicalDevice();
+			void CreateImageViews();
+
+			SwapChainDetails QuerySwapChainSupport(VkPhysicalDevice device);
+
+			VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats);
+			VkPresentModeKHR  ChooseSwapPresentMode(const std::vector<VkPresentModeKHR >& presents);
+			VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
+
 
 			void CreateWinGLFWSurface();
 
@@ -50,16 +67,21 @@ namespace Rose
 			GLFWwindow* m_Window = nullptr;
 			VkInstance m_VKInstance;
 			VkPhysicalDevice m_VKPhysicalDevice = VK_NULL_HANDLE;
-			VkDevice m_VKLogicalDebice;
+			VkDevice m_VKLogicalDevice;
 			VkQueue m_RenderingQueue;
 
+			VkSwapchainKHR m_SwapChain;
+			std::vector<VkImage> m_SwapChainImages;
+			std::vector<VkImageView> m_SwapChainImageViews;
+			VkFormat m_SwapChainImageFormat;
+			VkExtent2D m_SwapChainExtent;
 
 			VkDebugUtilsMessengerEXT m_DebugMessagerCallback;
 			VkSurfaceKHR m_VKWinSurface;
 
 
 			const std::vector<const char*> m_ValidationLayerNames = {
-				"VK_LAYER_KHRONOS_validation"
+				"VK_LAYER_KHRONOS_validation",
 			};
 
 

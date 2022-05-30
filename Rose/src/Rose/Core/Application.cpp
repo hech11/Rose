@@ -4,7 +4,10 @@
 
 
 #include <vector>
-
+#include <set>
+#include <optional>
+#include <algorithm>
+#include <stdexcept>
 
 
 namespace Rose
@@ -42,6 +45,9 @@ namespace Rose
 		}
 	}
 
+
+
+	
 	Application::Application()
 	{
 
@@ -52,7 +58,7 @@ namespace Rose
 
 
 		ChoosePhysicalDevice();
-		
+		CreateImageViews();
 	}
 
 	Application::~Application()
@@ -217,13 +223,25 @@ namespace Rose
 		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 		vkGetPhysicalDeviceQueueFamilyProperties(m_VKPhysicalDevice, &queueFamilyCount, queueFamilies.data());
 
-		uint32_t graphicsFamily;
+		std::optional<uint32_t> graphicsFamily;
+		std::optional<uint32_t> presentFamily;
 
 		int i = 0;
 		for (const auto& queueFamily : queueFamilies) {
 			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 				graphicsFamily = i;
 			}
+
+			uint32_t presentSupport;
+			vkGetPhysicalDeviceSurfaceSupportKHR(m_VKPhysicalDevice, i, m_VKWinSurface, &presentSupport);
+			if (presentSupport)
+			{
+				presentFamily = i;
+			}
+
+			if (graphicsFamily.has_value() && presentFamily.has_value())
+				break;
+
 
 			i++;
 		}
@@ -234,7 +252,7 @@ namespace Rose
 
 		VkDeviceQueueCreateInfo queueCreateInfo{};
 		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueCreateInfo.queueFamilyIndex = graphicsFamily;
+		queueCreateInfo.queueFamilyIndex = graphicsFamily.value();
 		queueCreateInfo.queueCount = 1;
 		queueCreateInfo.pQueuePriorities = &queuePriority;
 
@@ -245,9 +263,183 @@ namespace Rose
 		createInfo.pEnabledFeatures = &deviceFeatures;
 		createInfo.queueCreateInfoCount = 1;
 
-		vkCreateDevice(m_VKPhysicalDevice, &createInfo, nullptr, &m_VKLogicalDebice);
-		vkGetDeviceQueue(m_VKLogicalDebice, graphicsFamily, 0, &m_RenderingQueue);
 
+		// getting device extensions.... we assume we already support the swap chain..
+		std::vector<const char*> deviceExtentions =
+		{
+			VK_KHR_SWAPCHAIN_EXTENSION_NAME
+		};
+		uint32_t extensionCount;
+		vkEnumerateDeviceExtensionProperties(m_VKPhysicalDevice, nullptr, &extensionCount, nullptr);
+
+		std::vector<VkExtensionProperties> deviceExtsProps(extensionCount);
+		vkEnumerateDeviceExtensionProperties(m_VKPhysicalDevice, nullptr, &extensionCount, deviceExtsProps.data());
+
+
+		std::set<std::string> requiredExts(deviceExtentions.begin(), deviceExtentions.end());
+
+		for (const auto& extension : deviceExtsProps) {
+			requiredExts.erase(extension.extensionName);
+		}
+		for (const auto& names : requiredExts)
+		{
+			LOG("we support these extentions: %s\n", names.c_str());
+		}
+
+		createInfo.enabledExtensionCount = deviceExtentions.size();
+		createInfo.ppEnabledExtensionNames = deviceExtentions.data();
+
+		vkCreateDevice(m_VKPhysicalDevice, &createInfo, nullptr, &m_VKLogicalDevice);
+		vkGetDeviceQueue(m_VKLogicalDevice, graphicsFamily.value(), 0, &m_RenderingQueue);
+
+
+
+		// creating swapchain
+
+		SwapChainDetails swapChainDetails = QuerySwapChainSupport(m_VKPhysicalDevice);
+
+
+		uint32_t imageCount = swapChainDetails.Capabilities.minImageCount + 1;
+
+		VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainDetails.Formats);
+		VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainDetails.PresentModes);
+		VkExtent2D extent = ChooseSwapExtent(swapChainDetails.Capabilities);
+
+		VkSwapchainCreateInfoKHR swapChainInfo{};
+		swapChainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
+		swapChainInfo.surface = m_VKWinSurface;
+
+		swapChainInfo.minImageCount = imageCount;
+		swapChainInfo.imageFormat = surfaceFormat.format;
+		swapChainInfo.imageColorSpace = surfaceFormat.colorSpace;
+		swapChainInfo.imageExtent = extent;
+		swapChainInfo.imageArrayLayers = 1;
+		swapChainInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+
+		// concurrent only
+		uint32_t familyIndicies[] = { graphicsFamily.value(), presentFamily.value() };
+		if(graphicsFamily.value() != presentFamily.value())
+		{
+			swapChainInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
+			swapChainInfo.queueFamilyIndexCount = 2;
+			swapChainInfo.pQueueFamilyIndices = familyIndicies;
+		}
+		else
+		{
+			swapChainInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		}
+
+		swapChainInfo.preTransform = swapChainDetails.Capabilities.currentTransform;
+		swapChainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
+		swapChainInfo.presentMode = presentMode;
+		swapChainInfo.clipped = VK_TRUE;
+
+
+		swapChainInfo.oldSwapchain = VK_NULL_HANDLE;
+
+		vkCreateSwapchainKHR(m_VKLogicalDevice, &swapChainInfo, nullptr, &m_SwapChain);
+
+		uint32_t swapchainImageCount;
+		vkGetSwapchainImagesKHR(m_VKLogicalDevice, m_SwapChain, &swapchainImageCount, nullptr);
+		m_SwapChainImages.resize(swapchainImageCount);
+		vkGetSwapchainImagesKHR(m_VKLogicalDevice, m_SwapChain, &swapchainImageCount, m_SwapChainImages.data());
+
+		m_SwapChainImageFormat = surfaceFormat.format;
+		m_SwapChainExtent = extent;
+
+
+	}
+
+	void Application::CreateImageViews()
+	{
+		m_SwapChainImageViews.resize(m_SwapChainImages.size());
+
+		for (uint32_t i = 0; i < m_SwapChainImages.size(); i++)
+		{
+
+			VkImageViewCreateInfo info{};
+			info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			info.image = m_SwapChainImages[i];
+			info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			info.format = m_SwapChainImageFormat;
+			info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
+			info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
+			info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
+			info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
+			info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			info.subresourceRange.baseMipLevel = 0;
+			info.subresourceRange.levelCount = 1;
+			info.subresourceRange.baseArrayLayer = 0;
+			info.subresourceRange.layerCount = 1;
+
+			vkCreateImageView(m_VKLogicalDevice, &info, nullptr, &m_SwapChainImageViews[i]);
+		}
+	}
+
+	SwapChainDetails Application::QuerySwapChainSupport(VkPhysicalDevice device)
+	{
+	    SwapChainDetails result;
+
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_VKPhysicalDevice, m_VKWinSurface, &result.Capabilities);
+
+		uint32_t formatCount;
+		vkGetPhysicalDeviceSurfaceFormatsKHR(m_VKPhysicalDevice, m_VKWinSurface, &formatCount, nullptr);
+
+		result.Formats.resize(formatCount);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(m_VKPhysicalDevice, m_VKWinSurface, &formatCount, result.Formats.data());
+
+		uint32_t presentModeCount;
+		vkGetPhysicalDeviceSurfacePresentModesKHR(m_VKPhysicalDevice, m_VKWinSurface, &presentModeCount, nullptr);
+
+
+		result.PresentModes.resize(presentModeCount);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(m_VKPhysicalDevice, m_VKWinSurface, &presentModeCount, result.PresentModes.data());
+
+
+	    return result;
+	}
+
+	VkSurfaceFormatKHR Application::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats)
+	{
+		for (const auto& availableFormat : formats) {
+			if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+				return availableFormat;
+			}
+		}
+
+		return formats[0];
+	}
+
+	VkPresentModeKHR Application::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR >& presents)
+	{
+		for (const auto& availablePresentMode : presents) {
+			if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
+				return availablePresentMode;
+			}
+		}
+
+		return VK_PRESENT_MODE_FIFO_KHR;
+	}
+
+	VkExtent2D Application::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
+	{
+		if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
+			return capabilities.currentExtent;
+		}
+		else {
+			int width, height;
+			glfwGetFramebufferSize(m_Window, &width, &height);
+
+			VkExtent2D actualExtent = {
+				static_cast<uint32_t>(width),
+				static_cast<uint32_t>(height)
+			};
+
+			actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
+			actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
+
+			return actualExtent;
+		}
 	}
 
 	void Application::CreateWinGLFWSurface()
@@ -267,7 +459,14 @@ namespace Rose
 
 		callbacks::DestroyDebugUtilsMessengerEXT(m_VKInstance, m_DebugMessagerCallback, nullptr);
 
-		vkDestroyDevice(m_VKLogicalDebice, nullptr);
+
+		for (auto view : m_SwapChainImageViews) {
+			vkDestroyImageView(m_VKLogicalDevice, view, nullptr);
+		}
+
+
+		vkDestroySwapchainKHR(m_VKLogicalDevice, m_SwapChain, nullptr);
+		vkDestroyDevice(m_VKLogicalDevice, nullptr);
 
 		vkDestroySurfaceKHR(m_VKInstance, m_VKWinSurface, nullptr);
 		vkDestroyInstance(m_VKInstance, nullptr);
