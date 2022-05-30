@@ -65,6 +65,7 @@ namespace Rose
 			VkShaderModule CreateModule(const std::vector<uint32_t>& sprvCode);
 
 			void CreateShaderStagePipeline();
+			void CreateRenderPass();
 
 			void Reflect();
 
@@ -77,6 +78,7 @@ namespace Rose
 			std::unordered_map <ShaderModuleTypes, VkShaderModule> m_ShaderModules;
 
 			VkPipelineLayout m_PipelineLayout;
+			VkRenderPass m_RenderPass;
 
 	};
 

@@ -39,6 +39,8 @@ namespace Rose
 
 			VkDevice GetLogicalDevice() const { return m_VKLogicalDevice; }
 			VkExtent2D GetSwapChainExtent() const { return m_SwapChainExtent; }
+			VkFormat GetSwapChainImageFormat() const { return m_SwapChainImageFormat; }
+
 		public :
 
 			static Application& Get() {
