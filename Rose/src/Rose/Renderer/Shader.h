@@ -56,7 +56,7 @@ namespace Rose
 			Shader(const std::string& filepath);
 			~Shader();
 
-
+			void DestroyPipeline();
 
 		private :
 			void ParseShaders(const std::string& filepath);
@@ -75,6 +75,9 @@ namespace Rose
 			std::unordered_map<ShaderModuleTypes, std::string> m_UncompiledShaderSources;
 			std::unordered_map <ShaderModuleTypes, std::vector<uint32_t>> m_CompiledShaderSources;
 			std::unordered_map <ShaderModuleTypes, VkShaderModule> m_ShaderModules;
+
+			VkPipelineLayout m_PipelineLayout;
+
 	};
 
 }

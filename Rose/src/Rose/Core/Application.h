@@ -9,6 +9,8 @@
 
 
 #include <vector>
+#include <memory>
+#include "Rose/Renderer/Shader.h"
 
 namespace Rose
 {
@@ -33,6 +35,10 @@ namespace Rose
 
 			const GLFWwindow* GetWindow() const;
 			GLFWwindow* GetWindow();
+
+
+			VkDevice GetLogicalDevice() const { return m_VKLogicalDevice; }
+			VkExtent2D GetSwapChainExtent() const { return m_SwapChainExtent; }
 		public :
 
 			static Application& Get() {
@@ -48,6 +54,8 @@ namespace Rose
 
 			void ChoosePhysicalDevice();
 			void CreateImageViews();
+
+			void CreateGraphicsPipeline();
 
 			SwapChainDetails QuerySwapChainSupport(VkPhysicalDevice device);
 
@@ -75,6 +83,8 @@ namespace Rose
 			std::vector<VkImageView> m_SwapChainImageViews;
 			VkFormat m_SwapChainImageFormat;
 			VkExtent2D m_SwapChainExtent;
+
+			std::shared_ptr<Shader> m_Shader;
 
 			VkDebugUtilsMessengerEXT m_DebugMessagerCallback;
 			VkSurfaceKHR m_VKWinSurface;

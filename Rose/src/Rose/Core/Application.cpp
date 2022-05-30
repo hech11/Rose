@@ -59,6 +59,8 @@ namespace Rose
 
 		ChoosePhysicalDevice();
 		CreateImageViews();
+
+		CreateGraphicsPipeline();
 	}
 
 	Application::~Application()
@@ -374,6 +376,12 @@ namespace Rose
 
 			vkCreateImageView(m_VKLogicalDevice, &info, nullptr, &m_SwapChainImageViews[i]);
 		}
+	}
+
+	void Application::CreateGraphicsPipeline()
+	{
+		m_Shader = std::make_shared<Shader>("assets/shaders/test.shader");
+
 	}
 
 	SwapChainDetails Application::QuerySwapChainSupport(VkPhysicalDevice device)
