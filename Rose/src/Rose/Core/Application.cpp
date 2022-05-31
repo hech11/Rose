@@ -53,6 +53,14 @@ namespace Rose
 	{
 		s_INSTANCE = this;
 
+		
+			
+			
+		m_VertexData = {
+			{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+			{{0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}},
+			{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+		};
 		MakeWindow();
 		CreateVulkanInstance();
 		CreateWinGLFWSurface();
@@ -414,6 +422,54 @@ namespace Rose
 		}
 	}
 
+	void Application::CreateVertexBuffer()
+	{
+		VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = sizeof(m_VertexData[0]) * m_VertexData.size();
+		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		vkCreateBuffer(m_VKLogicalDevice, &bufferInfo, nullptr, &m_VertexBuffer);
+
+
+		VkMemoryRequirements memRequirements;
+		vkGetBufferMemoryRequirements(m_VKLogicalDevice, m_VertexBuffer, &memRequirements);
+
+
+		VkPhysicalDeviceMemoryProperties memProperties;
+		vkGetPhysicalDeviceMemoryProperties(m_VKPhysicalDevice, &memProperties);
+
+		uint32_t memTypeIndex = 0;
+		uint32_t propFilter = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+			if ((memRequirements.memoryTypeBits & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & propFilter) == propFilter)
+			{
+				memTypeIndex = i;
+				break;
+			}
+		}
+
+		VkMemoryAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = memTypeIndex;
+
+		if (vkAllocateMemory(m_VKLogicalDevice, &allocInfo, nullptr, &m_VBDeviceMemory) != VK_SUCCESS)
+			ASSERT();
+
+
+		if (vkBindBufferMemory(m_VKLogicalDevice, m_VertexBuffer, m_VBDeviceMemory, 0) != VK_SUCCESS)
+			ASSERT();
+
+		void* data;
+		vkMapMemory(m_VKLogicalDevice, m_VBDeviceMemory, 0, bufferInfo.size, 0, &data);
+		memcpy(data, m_VertexData.data(), bufferInfo.size);
+		vkUnmapMemory(m_VKLogicalDevice, m_VBDeviceMemory);
+
+
+	}
+
 	void Application::CreateCommandPoolAndBuffer()
 	{
 		VkCommandPoolCreateInfo createInfo{};
@@ -422,6 +478,8 @@ namespace Rose
 		createInfo.queueFamilyIndex = graphicsFamily.value();
 
 		vkCreateCommandPool(m_VKLogicalDevice, &createInfo, nullptr, &m_VKCommandPool);
+
+		CreateVertexBuffer();
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -463,7 +521,7 @@ namespace Rose
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = m_SwapChainExtent;
 
-		VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
+		VkClearValue clearColor = { {{0.1f, 0.1f, 0.1f, 1.0f}} };
 		renderPassInfo.clearValueCount = 1;
 		renderPassInfo.pClearValues = &clearColor;
 
@@ -471,7 +529,12 @@ namespace Rose
 
 		vkCmdBindPipeline(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Shader->GetGrahpicsPipeline());
 
-		vkCmdDraw(m_VKCommandBuffer, 3, 1, 0, 0);
+
+		VkBuffer vbos[] = { m_VertexBuffer };
+		VkDeviceSize offset[] = { 0 };
+		vkCmdBindVertexBuffers(m_VKCommandBuffer, 0, 1, vbos, offset);
+
+		vkCmdDraw(m_VKCommandBuffer,m_VertexData.size(), 1, 0, 0);
 
 		vkCmdEndRenderPass(m_VKCommandBuffer);
 		vkEndCommandBuffer(m_VKCommandBuffer);
@@ -606,7 +669,8 @@ namespace Rose
 
 		callbacks::DestroyDebugUtilsMessengerEXT(m_VKInstance, m_DebugMessagerCallback, nullptr);
 
-
+		vkDestroyBuffer(m_VKLogicalDevice, m_VertexBuffer, nullptr);
+		vkFreeMemory(m_VKLogicalDevice, m_VBDeviceMemory, nullptr);
 
 		vkDestroySemaphore(m_VKLogicalDevice, m_ImageReadySemaphore, nullptr);
 		vkDestroySemaphore(m_VKLogicalDevice, m_RenderFinishedSemaphore, nullptr);
