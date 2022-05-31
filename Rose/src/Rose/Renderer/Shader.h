@@ -5,6 +5,7 @@
 #include <unordered_map>
 
 #include <vulkan1.2.182.0/include/Vulkan/vulkan/vulkan.h>
+#include <glm/glm.hpp>
 
 namespace Rose
 {
@@ -49,6 +50,11 @@ namespace Rose
 		Vertex, Pixel
 	};
 
+	struct UniformBufferData
+	{
+		glm::mat4 Model, ViewProj;
+	};
+
 	class Shader
 	{
 
@@ -57,12 +63,28 @@ namespace Rose
 			~Shader();
 
 			void DestroyPipeline();
+			void CreateUniformBuffer();
+
+
+			void UpdateUniformBuffer(UniformBufferData& ubo);
+
 
 			const VkPipeline& GetGrahpicsPipeline() const { return m_GraphicsPipeline; }
 			VkPipeline& GetGrahpicsPipeline() { return m_GraphicsPipeline; }
 
+			VkPipelineLayout& GetPipelineLayout() { return m_PipelineLayout; }
+			const VkPipelineLayout& GetPipelineLayout() const { return m_PipelineLayout; }
+
 			const VkRenderPass& GetRenderPass() const { return m_RenderPass; }
 			VkRenderPass& GetRenderPass() { return m_RenderPass; }
+
+			VkDescriptorSet& GetDescriptorSet() { return m_DescriptorSet; }
+			const VkDescriptorSet& GetDescriptorSet() const { return m_DescriptorSet; }
+
+			void CreateDiscriptorSetLayout();
+
+			void CreateDescriptorPool();
+			void CreateDescriptorSets();
 
 		private :
 			void ParseShaders(const std::string& filepath);
@@ -71,7 +93,6 @@ namespace Rose
 			VkShaderModule CreateModule(const std::vector<uint32_t>& sprvCode);
 
 			void CreateShaderStagePipeline();
-
 			void Reflect();
 
 		private :
@@ -83,8 +104,16 @@ namespace Rose
 			std::unordered_map <ShaderModuleTypes, VkShaderModule> m_ShaderModules;
 
 			VkPipeline m_GraphicsPipeline;
+			VkDescriptorSetLayout m_DescriptorSetLayout;
 			VkPipelineLayout m_PipelineLayout;
 			VkRenderPass m_RenderPass;
+
+			VkBuffer m_UniformBuffer;
+			VkDeviceMemory m_UBDeviceMemory;
+
+			VkDescriptorPool m_DescriptorPool;
+			VkDescriptorSet m_DescriptorSet;
+
 
 	};
 

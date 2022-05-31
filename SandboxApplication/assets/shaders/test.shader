@@ -8,10 +8,16 @@ layout(location = 1) in vec3 a_Color;
 layout(location = 0) out vec3 v_col;
 
 
+layout(binding = 0) uniform BufferObject
+{
+	mat4 Model;
+	mat4 ViewProj;
+} ubo;
+
 
 void main()
 {
-	gl_Position = vec4(a_Position, 0.0f, 1.0f);
+	gl_Position = ubo.ViewProj * ubo.Model * vec4(a_Position, 0.0f, 1.0f);
 	v_col = a_Color;
 }
 

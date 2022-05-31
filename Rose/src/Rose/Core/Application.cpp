@@ -7,6 +7,8 @@
 #include <set>
 #include <algorithm>
 #include <stdexcept>
+#include "glm/ext/matrix_clip_space.hpp"
+#include "glm/gtx/transform.hpp"
 
 
 namespace Rose
@@ -91,10 +93,24 @@ namespace Rose
 	void Application::Run()
 	{
 
+		UniformBufferData ubo;
+		ubo.ViewProj = glm::perspective(glm::radians(45.0f), 16.0f / 9.0f, 0.1f, 1000.0f) * glm::translate(glm::mat4(1.0f), { 0.5f, 0.0f, -10.0f });
+		glm::vec3 pos = {0.0f, 0.0f, 0.0f};
+		static float increment = 0.0f;
+
 		while (!glfwWindowShouldClose(m_Window))
 		{
 
 			glfwPollEvents();
+
+			ubo.Model = glm::translate(glm::mat4(1.0f), pos);
+
+			pos.x = sin(increment);
+			pos.y = cos(increment);
+			pos.z = sin(increment);
+			increment+=0.0016f*15.0f;
+
+			m_Shader->UpdateUniformBuffer(ubo);
 			DrawOntoScreen();
 
 		}
@@ -538,6 +554,7 @@ namespace Rose
 		CreateVertexBuffer();
 		CreateIndexBuffer();
 
+
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		allocInfo.commandPool = m_VKCommandPool;
@@ -593,7 +610,7 @@ namespace Rose
 		vkCmdBindVertexBuffers(m_VKCommandBuffer, 0, 1, vbos, offset);
 		vkCmdBindIndexBuffer(m_VKCommandBuffer, m_IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
-
+		vkCmdBindDescriptorSets(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Shader->GetPipelineLayout(), 0, 1, &m_Shader->GetDescriptorSet(), 0, nullptr);
 		vkCmdDrawIndexed(m_VKCommandBuffer, m_IndexData.size(), 1, 0, 0, 0);
 
 		vkCmdEndRenderPass(m_VKCommandBuffer);
@@ -609,6 +626,9 @@ namespace Rose
 		uint32_t imageIndex;
 		vkAcquireNextImageKHR(m_VKLogicalDevice, m_SwapChain, UINT64_MAX, m_ImageReadySemaphore, VK_NULL_HANDLE, &imageIndex);
 		vkResetCommandBuffer(m_VKCommandBuffer, 0);
+
+
+		
 
 		RecordCommandBuffer(imageIndex);
 
