@@ -1,8 +1,14 @@
-bin/
-bin-int/
+.vs/
+/bin
+/Rose/vendor/glfw/bin/
+/Rose/vendor/glfw/bin-int/
+/bin-int
 
+
+!/Rose/vendor/glm/
 
 *.vs
 *.sln
 *.vcxproj
 *.vcxproj.user
+*.vcxproj.filters
