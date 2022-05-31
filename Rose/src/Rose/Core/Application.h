@@ -98,6 +98,7 @@ namespace Rose
 			void CreateFramebuffers();
 
 			void CreateVertexBuffer();
+			void CreateIndexBuffer();
 
 			void CreateCommandPoolAndBuffer();
 			void CreateSyncObjs();
@@ -141,6 +142,11 @@ namespace Rose
 			std::vector<Rose::VertexData> m_VertexData;
 			VkBuffer m_VertexBuffer;
 			VkDeviceMemory m_VBDeviceMemory;
+
+
+			std::vector<uint32_t> m_IndexData;
+			VkBuffer m_IndexBuffer;
+			VkDeviceMemory m_IBDeviceMemory;
 
 
 			std::vector<VkFramebuffer> m_Framebuffers;

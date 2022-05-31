@@ -57,9 +57,15 @@ namespace Rose
 			
 			
 		m_VertexData = {
-			{{0.0f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-			{{0.5f,  0.5f}, {0.0f, 1.0f, 0.0f}},
-			{{-0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}}
+			{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+			{{0.5f,  -0.5f}, {0.0f, 1.0f, 0.0f}},
+			{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+			{{ -0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+		};
+
+		m_IndexData =
+		{
+			0, 1, 2, 2, 3, 0
 		};
 		MakeWindow();
 		CreateVulkanInstance();
@@ -470,6 +476,56 @@ namespace Rose
 
 	}
 
+	void Application::CreateIndexBuffer()
+	{
+		VkDeviceSize bufferSize = sizeof(m_IndexData[0]) * m_IndexData.size();
+
+
+		VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = bufferSize;
+		bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		vkCreateBuffer(m_VKLogicalDevice, &bufferInfo, nullptr, &m_IndexBuffer);
+
+		VkMemoryRequirements memRequirements;
+		vkGetBufferMemoryRequirements(m_VKLogicalDevice, m_IndexBuffer, &memRequirements);
+
+
+		VkPhysicalDeviceMemoryProperties memProperties;
+		vkGetPhysicalDeviceMemoryProperties(m_VKPhysicalDevice, &memProperties);
+
+		uint32_t memTypeIndex = 0;
+		uint32_t propFilter = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+			if ((memRequirements.memoryTypeBits & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & propFilter) == propFilter)
+			{
+				memTypeIndex = i;
+				break;
+			}
+		}
+
+		VkMemoryAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = memTypeIndex;
+
+		if (vkAllocateMemory(m_VKLogicalDevice, &allocInfo, nullptr, &m_IBDeviceMemory) != VK_SUCCESS)
+			ASSERT();
+
+
+		if (vkBindBufferMemory(m_VKLogicalDevice, m_IndexBuffer, m_IBDeviceMemory, 0) != VK_SUCCESS)
+			ASSERT();
+
+		void* data;
+		vkMapMemory(m_VKLogicalDevice, m_IBDeviceMemory, 0, bufferInfo.size, 0, &data);
+		memcpy(data, m_IndexData.data(), bufferInfo.size);
+		vkUnmapMemory(m_VKLogicalDevice, m_IBDeviceMemory);
+
+
+	}
+
 	void Application::CreateCommandPoolAndBuffer()
 	{
 		VkCommandPoolCreateInfo createInfo{};
@@ -480,6 +536,7 @@ namespace Rose
 		vkCreateCommandPool(m_VKLogicalDevice, &createInfo, nullptr, &m_VKCommandPool);
 
 		CreateVertexBuffer();
+		CreateIndexBuffer();
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -532,9 +589,12 @@ namespace Rose
 
 		VkBuffer vbos[] = { m_VertexBuffer };
 		VkDeviceSize offset[] = { 0 };
-		vkCmdBindVertexBuffers(m_VKCommandBuffer, 0, 1, vbos, offset);
 
-		vkCmdDraw(m_VKCommandBuffer,m_VertexData.size(), 1, 0, 0);
+		vkCmdBindVertexBuffers(m_VKCommandBuffer, 0, 1, vbos, offset);
+		vkCmdBindIndexBuffer(m_VKCommandBuffer, m_IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+
+		vkCmdDrawIndexed(m_VKCommandBuffer, m_IndexData.size(), 1, 0, 0, 0);
 
 		vkCmdEndRenderPass(m_VKCommandBuffer);
 		vkEndCommandBuffer(m_VKCommandBuffer);
@@ -671,6 +731,9 @@ namespace Rose
 
 		vkDestroyBuffer(m_VKLogicalDevice, m_VertexBuffer, nullptr);
 		vkFreeMemory(m_VKLogicalDevice, m_VBDeviceMemory, nullptr);
+
+		vkDestroyBuffer(m_VKLogicalDevice, m_IndexBuffer, nullptr);
+		vkFreeMemory(m_VKLogicalDevice, m_IBDeviceMemory, nullptr);
 
 		vkDestroySemaphore(m_VKLogicalDevice, m_ImageReadySemaphore, nullptr);
 		vkDestroySemaphore(m_VKLogicalDevice, m_RenderFinishedSemaphore, nullptr);
