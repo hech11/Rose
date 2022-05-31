@@ -7,6 +7,8 @@
 #include <set>
 #include <algorithm>
 #include <stdexcept>
+#include "glm/ext/matrix_clip_space.hpp"
+#include "glm/gtx/transform.hpp"
 
 
 namespace Rose
@@ -53,6 +55,20 @@ namespace Rose
 	{
 		s_INSTANCE = this;
 
+		
+			
+			
+		m_VertexData = {
+			{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
+			{{0.5f,  -0.5f}, {0.0f, 1.0f, 0.0f}},
+			{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
+			{{ -0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+		};
+
+		m_IndexData =
+		{
+			0, 1, 2, 2, 3, 0
+		};
 		MakeWindow();
 		CreateVulkanInstance();
 		CreateWinGLFWSurface();
@@ -77,10 +93,24 @@ namespace Rose
 	void Application::Run()
 	{
 
+		UniformBufferData ubo;
+		ubo.ViewProj = glm::perspective(glm::radians(45.0f), 16.0f / 9.0f, 0.1f, 1000.0f) * glm::translate(glm::mat4(1.0f), { 0.5f, 0.0f, -10.0f });
+		glm::vec3 pos = {0.0f, 0.0f, 0.0f};
+		static float increment = 0.0f;
+
 		while (!glfwWindowShouldClose(m_Window))
 		{
 
 			glfwPollEvents();
+
+			ubo.Model = glm::translate(glm::mat4(1.0f), pos);
+
+			pos.x = sin(increment);
+			pos.y = cos(increment);
+			pos.z = sin(increment);
+			increment+=0.0016f*15.0f;
+
+			m_Shader->UpdateUniformBuffer(ubo);
 			DrawOntoScreen();
 
 		}
@@ -414,6 +444,104 @@ namespace Rose
 		}
 	}
 
+	void Application::CreateVertexBuffer()
+	{
+		VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = sizeof(m_VertexData[0]) * m_VertexData.size();
+		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		vkCreateBuffer(m_VKLogicalDevice, &bufferInfo, nullptr, &m_VertexBuffer);
+
+
+		VkMemoryRequirements memRequirements;
+		vkGetBufferMemoryRequirements(m_VKLogicalDevice, m_VertexBuffer, &memRequirements);
+
+
+		VkPhysicalDeviceMemoryProperties memProperties;
+		vkGetPhysicalDeviceMemoryProperties(m_VKPhysicalDevice, &memProperties);
+
+		uint32_t memTypeIndex = 0;
+		uint32_t propFilter = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+			if ((memRequirements.memoryTypeBits & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & propFilter) == propFilter)
+			{
+				memTypeIndex = i;
+				break;
+			}
+		}
+
+		VkMemoryAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = memTypeIndex;
+
+		if (vkAllocateMemory(m_VKLogicalDevice, &allocInfo, nullptr, &m_VBDeviceMemory) != VK_SUCCESS)
+			ASSERT();
+
+
+		if (vkBindBufferMemory(m_VKLogicalDevice, m_VertexBuffer, m_VBDeviceMemory, 0) != VK_SUCCESS)
+			ASSERT();
+
+		void* data;
+		vkMapMemory(m_VKLogicalDevice, m_VBDeviceMemory, 0, bufferInfo.size, 0, &data);
+		memcpy(data, m_VertexData.data(), bufferInfo.size);
+		vkUnmapMemory(m_VKLogicalDevice, m_VBDeviceMemory);
+
+
+	}
+
+	void Application::CreateIndexBuffer()
+	{
+		VkDeviceSize bufferSize = sizeof(m_IndexData[0]) * m_IndexData.size();
+
+
+		VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = bufferSize;
+		bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+		vkCreateBuffer(m_VKLogicalDevice, &bufferInfo, nullptr, &m_IndexBuffer);
+
+		VkMemoryRequirements memRequirements;
+		vkGetBufferMemoryRequirements(m_VKLogicalDevice, m_IndexBuffer, &memRequirements);
+
+
+		VkPhysicalDeviceMemoryProperties memProperties;
+		vkGetPhysicalDeviceMemoryProperties(m_VKPhysicalDevice, &memProperties);
+
+		uint32_t memTypeIndex = 0;
+		uint32_t propFilter = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+			if ((memRequirements.memoryTypeBits & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & propFilter) == propFilter)
+			{
+				memTypeIndex = i;
+				break;
+			}
+		}
+
+		VkMemoryAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = memTypeIndex;
+
+		if (vkAllocateMemory(m_VKLogicalDevice, &allocInfo, nullptr, &m_IBDeviceMemory) != VK_SUCCESS)
+			ASSERT();
+
+
+		if (vkBindBufferMemory(m_VKLogicalDevice, m_IndexBuffer, m_IBDeviceMemory, 0) != VK_SUCCESS)
+			ASSERT();
+
+		void* data;
+		vkMapMemory(m_VKLogicalDevice, m_IBDeviceMemory, 0, bufferInfo.size, 0, &data);
+		memcpy(data, m_IndexData.data(), bufferInfo.size);
+		vkUnmapMemory(m_VKLogicalDevice, m_IBDeviceMemory);
+
+
+	}
+
 	void Application::CreateCommandPoolAndBuffer()
 	{
 		VkCommandPoolCreateInfo createInfo{};
@@ -422,6 +550,10 @@ namespace Rose
 		createInfo.queueFamilyIndex = graphicsFamily.value();
 
 		vkCreateCommandPool(m_VKLogicalDevice, &createInfo, nullptr, &m_VKCommandPool);
+
+		CreateVertexBuffer();
+		CreateIndexBuffer();
+
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
@@ -463,7 +595,7 @@ namespace Rose
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = m_SwapChainExtent;
 
-		VkClearValue clearColor = { {{0.0f, 0.0f, 0.0f, 1.0f}} };
+		VkClearValue clearColor = { {{0.1f, 0.1f, 0.1f, 1.0f}} };
 		renderPassInfo.clearValueCount = 1;
 		renderPassInfo.pClearValues = &clearColor;
 
@@ -471,7 +603,15 @@ namespace Rose
 
 		vkCmdBindPipeline(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Shader->GetGrahpicsPipeline());
 
-		vkCmdDraw(m_VKCommandBuffer, 3, 1, 0, 0);
+
+		VkBuffer vbos[] = { m_VertexBuffer };
+		VkDeviceSize offset[] = { 0 };
+
+		vkCmdBindVertexBuffers(m_VKCommandBuffer, 0, 1, vbos, offset);
+		vkCmdBindIndexBuffer(m_VKCommandBuffer, m_IndexBuffer, 0, VK_INDEX_TYPE_UINT32);
+
+		vkCmdBindDescriptorSets(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Shader->GetPipelineLayout(), 0, 1, &m_Shader->GetDescriptorSet(), 0, nullptr);
+		vkCmdDrawIndexed(m_VKCommandBuffer, m_IndexData.size(), 1, 0, 0, 0);
 
 		vkCmdEndRenderPass(m_VKCommandBuffer);
 		vkEndCommandBuffer(m_VKCommandBuffer);
@@ -486,6 +626,9 @@ namespace Rose
 		uint32_t imageIndex;
 		vkAcquireNextImageKHR(m_VKLogicalDevice, m_SwapChain, UINT64_MAX, m_ImageReadySemaphore, VK_NULL_HANDLE, &imageIndex);
 		vkResetCommandBuffer(m_VKCommandBuffer, 0);
+
+
+		
 
 		RecordCommandBuffer(imageIndex);
 
@@ -606,7 +749,11 @@ namespace Rose
 
 		callbacks::DestroyDebugUtilsMessengerEXT(m_VKInstance, m_DebugMessagerCallback, nullptr);
 
+		vkDestroyBuffer(m_VKLogicalDevice, m_VertexBuffer, nullptr);
+		vkFreeMemory(m_VKLogicalDevice, m_VBDeviceMemory, nullptr);
 
+		vkDestroyBuffer(m_VKLogicalDevice, m_IndexBuffer, nullptr);
+		vkFreeMemory(m_VKLogicalDevice, m_IBDeviceMemory, nullptr);
 
 		vkDestroySemaphore(m_VKLogicalDevice, m_ImageReadySemaphore, nullptr);
 		vkDestroySemaphore(m_VKLogicalDevice, m_RenderFinishedSemaphore, nullptr);

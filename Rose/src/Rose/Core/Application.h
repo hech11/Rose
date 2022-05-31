@@ -9,13 +9,49 @@
 
 
 #include <vector>
+#include <array>
 #include <optional>
 #include <memory>
+#include <glm/glm.hpp>
+
 #include "Rose/Renderer/Shader.h"
 
 namespace Rose
 {
+	struct VertexData
+	{
+		glm::vec2 Position;
+		glm::vec3 Color;
 
+		static VkVertexInputBindingDescription GetBindingDescription() {
+
+			VkVertexInputBindingDescription result{};
+			result.binding = 0;
+			result.stride = sizeof(VertexData);
+			result.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
+
+			return result;
+		}
+
+		static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescription()
+		{
+			std::array<VkVertexInputAttributeDescription, 2> result{};
+
+			result[0].binding = 0;
+			result[0].location = 0;
+			result[0].format = VK_FORMAT_R32G32_SFLOAT;
+			result[0].offset = offsetof(VertexData, Position);
+
+
+			result[1].binding = 0;
+			result[1].location = 1;
+			result[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+			result[1].offset = offsetof(VertexData, Color);
+
+			return result;
+
+		}
+	};
 
 	struct SwapChainDetails {
 		VkSurfaceCapabilitiesKHR Capabilities;
@@ -40,6 +76,7 @@ namespace Rose
 
 
 			VkDevice GetLogicalDevice() const { return m_VKLogicalDevice; }
+			VkPhysicalDevice GetPhysicalDevice() const { return m_VKPhysicalDevice; }
 			VkExtent2D GetSwapChainExtent() const { return m_SwapChainExtent; }
 			VkFormat GetSwapChainImageFormat() const { return m_SwapChainImageFormat; }
 
@@ -60,6 +97,9 @@ namespace Rose
 
 			void CreateGraphicsPipeline();
 			void CreateFramebuffers();
+
+			void CreateVertexBuffer();
+			void CreateIndexBuffer();
 
 			void CreateCommandPoolAndBuffer();
 			void CreateSyncObjs();
@@ -98,6 +138,16 @@ namespace Rose
 			std::vector<VkImageView> m_SwapChainImageViews;
 			VkFormat m_SwapChainImageFormat;
 			VkExtent2D m_SwapChainExtent;
+
+
+			std::vector<Rose::VertexData> m_VertexData;
+			VkBuffer m_VertexBuffer;
+			VkDeviceMemory m_VBDeviceMemory;
+
+
+			std::vector<uint32_t> m_IndexData;
+			VkBuffer m_IndexBuffer;
+			VkDeviceMemory m_IBDeviceMemory;
 
 
 			std::vector<VkFramebuffer> m_Framebuffers;

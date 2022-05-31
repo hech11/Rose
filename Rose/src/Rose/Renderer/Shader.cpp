@@ -53,7 +53,16 @@ namespace Rose
 			m_ShaderModules[type] = CreateModule(compiledSources);
 		}
 
+		CreateUniformBuffer();
+		CreateDiscriptorSetLayout();
+		CreateDescriptorPool();
+		CreateDescriptorSets();
+
 		CreateShaderStagePipeline();
+
+
+
+
 		for (auto&& [type, module] : m_ShaderModules)
 		{
 			vkDestroyShaderModule(Application::Get().GetLogicalDevice(), module, nullptr);
@@ -67,6 +76,15 @@ namespace Rose
 
 	void Shader::DestroyPipeline()
 	{
+
+		vkDestroyBuffer(Application::Get().GetLogicalDevice(), m_UniformBuffer, nullptr);
+		vkFreeMemory(Application::Get().GetLogicalDevice(), m_UBDeviceMemory, nullptr);
+
+		vkDestroyDescriptorSetLayout(Application::Get().GetLogicalDevice(), m_DescriptorSetLayout, nullptr);
+		vkDestroyDescriptorPool(Application::Get().GetLogicalDevice(), m_DescriptorPool, nullptr);
+
+
+
 		vkDestroyPipeline(Application::Get().GetLogicalDevice(), m_GraphicsPipeline, nullptr);
 		vkDestroyPipelineLayout(Application::Get().GetLogicalDevice(), m_PipelineLayout, nullptr);
 		vkDestroyRenderPass(Application::Get().GetLogicalDevice(), m_RenderPass, nullptr);
@@ -170,13 +188,15 @@ namespace Rose
 			shaderStages.push_back(stageInfo);
 		}
 
+		auto bindingDesc = VertexData::GetBindingDescription();
+		auto attributeDesc = VertexData::GetAttributeDescription();
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
-		vertexInputInfo.vertexBindingDescriptionCount = 0;
-		vertexInputInfo.pVertexBindingDescriptions = nullptr;
-		vertexInputInfo.vertexAttributeDescriptionCount = 0;
-		vertexInputInfo.pVertexAttributeDescriptions = nullptr; 
+		vertexInputInfo.vertexBindingDescriptionCount = 1;
+		vertexInputInfo.pVertexBindingDescriptions = &bindingDesc;
+		vertexInputInfo.vertexAttributeDescriptionCount = attributeDesc.size();
+		vertexInputInfo.pVertexAttributeDescriptions = attributeDesc.data(); 
 
 		VkPipelineInputAssemblyStateCreateInfo inputAssembly{};
 		inputAssembly.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -210,6 +230,8 @@ namespace Rose
 		//rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
+		rasterizer.cullMode = VK_CULL_MODE_NONE;
+		//rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f;
@@ -255,6 +277,8 @@ namespace Rose
 
 		VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
 		pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+		pipelineLayoutInfo.setLayoutCount = 1;
+		pipelineLayoutInfo.pSetLayouts = &m_DescriptorSetLayout;
 
 		vkCreatePipelineLayout(Application::Get().GetLogicalDevice(), &pipelineLayoutInfo, nullptr, &m_PipelineLayout);
 		
@@ -313,6 +337,121 @@ namespace Rose
 	}
 
 	
+
+	void Shader::CreateDiscriptorSetLayout()
+	{
+
+		VkDescriptorSetLayoutBinding uboLayoutBinding{};
+		uboLayoutBinding.binding = 0;
+		uboLayoutBinding.descriptorCount = 1;
+		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+
+		VkDescriptorSetLayoutCreateInfo layoutInfo{};
+		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+		layoutInfo.bindingCount = 1;
+		layoutInfo.pBindings = &uboLayoutBinding;
+
+		vkCreateDescriptorSetLayout(Application::Get().GetLogicalDevice(), &layoutInfo, nullptr, &m_DescriptorSetLayout);
+	}
+
+	void Shader::CreateUniformBuffer()
+	{
+		VkDeviceSize bufferSize = sizeof(UniformBufferData);
+
+
+		VkBufferCreateInfo bufferInfo{};
+		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+		bufferInfo.size = bufferSize;
+		bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+		const auto& VKLogicalDevice = Application::Get().GetLogicalDevice();
+
+		vkCreateBuffer(VKLogicalDevice, &bufferInfo, nullptr, &m_UniformBuffer);
+
+		VkMemoryRequirements memRequirements;
+		vkGetBufferMemoryRequirements(VKLogicalDevice, m_UniformBuffer, &memRequirements);
+
+
+		VkPhysicalDeviceMemoryProperties memProperties;
+		vkGetPhysicalDeviceMemoryProperties(Application::Get().GetPhysicalDevice(), &memProperties);
+
+		uint32_t memTypeIndex = 0;
+		uint32_t propFilter = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+			if ((memRequirements.memoryTypeBits & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & propFilter) == propFilter)
+			{
+				memTypeIndex = i;
+				break;
+			}
+		}
+
+		VkMemoryAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+		allocInfo.allocationSize = memRequirements.size;
+		allocInfo.memoryTypeIndex = memTypeIndex;
+
+		if (vkAllocateMemory(VKLogicalDevice, &allocInfo, nullptr, &m_UBDeviceMemory) != VK_SUCCESS)
+			ASSERT();
+
+		vkBindBufferMemory(Application::Get().GetLogicalDevice(), m_UniformBuffer, m_UBDeviceMemory, 0);
+	}
+
+	void Shader::UpdateUniformBuffer(UniformBufferData& ubo)
+	{
+		void* data;
+		vkMapMemory(Application::Get().GetLogicalDevice(), m_UBDeviceMemory, 0, sizeof(ubo), 0, &data);
+		memcpy(data, &ubo, sizeof(ubo));
+		vkUnmapMemory(Application::Get().GetLogicalDevice(), m_UBDeviceMemory);
+
+	}
+
+	void Shader::CreateDescriptorPool()
+	{
+		VkDescriptorPoolSize poolSize{};
+		poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSize.descriptorCount = 1;
+
+		VkDescriptorPoolCreateInfo poolInfo{};
+		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		poolInfo.poolSizeCount = 1;
+		poolInfo.pPoolSizes = &poolSize;
+
+		poolInfo.maxSets = 1;
+
+		vkCreateDescriptorPool(Application::Get().GetLogicalDevice(), &poolInfo, nullptr, &m_DescriptorPool);
+	}
+
+	void Shader::CreateDescriptorSets()
+	{
+
+		std::vector<VkDescriptorSetLayout> layouts(1, m_DescriptorSetLayout); // TODO: multiple frames in flight
+		VkDescriptorSetAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+		allocInfo.descriptorPool = m_DescriptorPool;
+		allocInfo.descriptorSetCount = 1;
+		allocInfo.pSetLayouts = layouts.data();
+		vkAllocateDescriptorSets(Application::Get().GetLogicalDevice(), &allocInfo, &m_DescriptorSet);
+
+
+		VkDescriptorBufferInfo bufferInfo{};
+		bufferInfo.buffer = m_UniformBuffer;
+		bufferInfo.offset = 0;
+		bufferInfo.range = sizeof(UniformBufferData);
+
+		VkWriteDescriptorSet descWrite{};
+		descWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descWrite.dstSet = m_DescriptorSet;
+		descWrite.dstBinding = 0;
+		descWrite.dstArrayElement = 0;
+		descWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descWrite.descriptorCount = 1;
+
+		descWrite.pBufferInfo = &bufferInfo;
+
+		vkUpdateDescriptorSets(Application::Get().GetLogicalDevice(), 1, &descWrite, 0, nullptr);
+
+	}
 
 	void Shader::Reflect()
 	{
