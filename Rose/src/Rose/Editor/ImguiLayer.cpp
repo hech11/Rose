@@ -65,6 +65,31 @@ namespace Rose
 		ImGui_ImplVulkan_Init(&init_info, Application::Get().GetShader()->GetRenderPass());
 
 
+		// Upload Fonts
+		{
+			// Use any command queue
+			VkCommandPool command_pool = Application::Get().GetContext()->GetLogicalDevice()->GetCommandPool();
+			VkCommandBuffer command_buffer = Application::Get().GetCommandBuffer();
+
+			vkResetCommandPool(Application::Get().GetContext()->GetLogicalDevice()->GetDevice(), command_pool, 0);
+			VkCommandBufferBeginInfo begin_info = {};
+			begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+			begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+			vkBeginCommandBuffer(command_buffer, &begin_info);
+
+			ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+
+			VkSubmitInfo end_info = {};
+			end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+			end_info.commandBufferCount = 1;
+			end_info.pCommandBuffers = &command_buffer;
+			vkEndCommandBuffer(command_buffer);
+			vkQueueSubmit(Application::Get().GetContext()->GetLogicalDevice()->GetQueue(), 1, &end_info, VK_NULL_HANDLE);
+
+			vkDeviceWaitIdle(context->GetLogicalDevice()->GetDevice());
+			ImGui_ImplVulkan_DestroyFontUploadObjects();
+		}
+
 	}
 
 	void ImguiLayer::Shutdown()
