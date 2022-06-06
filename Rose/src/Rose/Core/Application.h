@@ -14,7 +14,8 @@
 #include <memory>
 #include <glm/glm.hpp>
 
-#include "Rose/Renderer/Shader.h"
+#include "Rose/Renderer/API/Shader.h"
+#include "Rose/Renderer/API/VertexBuffer.h"
 
 namespace Rose
 {
@@ -141,8 +142,7 @@ namespace Rose
 
 
 			std::vector<Rose::VertexData> m_VertexData;
-			VkBuffer m_VertexBuffer;
-			VkDeviceMemory m_VBDeviceMemory;
+			std::shared_ptr<Rose::VertexBuffer> m_VBO;
 
 
 			std::vector<uint32_t> m_IndexData;

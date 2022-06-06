@@ -24,8 +24,8 @@ namespace Rose
 		{
 			switch (type)
 			{
-				case Rose::Vertex: return shaderc_glsl_vertex_shader;
-				case Rose::Pixel: return shaderc_glsl_fragment_shader;
+			case Rose::ShaderModuleTypes::Vertex: return shaderc_glsl_vertex_shader;
+			case Rose::ShaderModuleTypes::Pixel: return shaderc_glsl_fragment_shader;
 			}
 		}
 
@@ -33,8 +33,8 @@ namespace Rose
 		{
 			switch (type)
 			{
-				case Rose::Vertex: return VK_SHADER_STAGE_VERTEX_BIT;
-				case Rose::Pixel:return VK_SHADER_STAGE_FRAGMENT_BIT;
+			case Rose::ShaderModuleTypes::Vertex: return VK_SHADER_STAGE_VERTEX_BIT;
+			case Rose::ShaderModuleTypes::Pixel:return VK_SHADER_STAGE_FRAGMENT_BIT;
 			}
 		}
 
