@@ -1,6 +1,7 @@
 #pragma once
 
 #include <vulkan1.2.182.0/include/Vulkan/vulkan/vulkan.h>
+#include "RenderDevice.h"
 
 
 namespace Rose
@@ -21,7 +22,7 @@ namespace Rose
 			static VkInstance& GetInstance() { return s_VKInstance; }
 
 		private :
-			VkPhysicalDevice m_PhysicalDevice;
+			std::shared_ptr<PhysicalRenderingDevice> m_PhysicalDevice;
 			VkDevice m_LogicalDevice;
 
 			static VkInstance s_VKInstance;

@@ -136,7 +136,7 @@ namespace Rose
 		callbacks::CreateDebugUtilsMessengerEXT(s_VKInstance, &debugInfo, nullptr, &m_DebugMessagerCallback);
 
 
-
+		m_PhysicalDevice = std::make_shared<PhysicalRenderingDevice>();
 	}
 
 	void RendererContext::Shutdown()
