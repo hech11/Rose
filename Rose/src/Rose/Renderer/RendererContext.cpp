@@ -137,6 +137,18 @@ namespace Rose
 
 
 		m_PhysicalDevice = std::make_shared<PhysicalRenderingDevice>();
+
+		VkPhysicalDeviceFeatures enabledFeatures;
+		memset(&enabledFeatures, 0, sizeof(VkPhysicalDeviceFeatures));
+		enabledFeatures.samplerAnisotropy = true;
+		enabledFeatures.wideLines = true;
+		enabledFeatures.fillModeNonSolid = true;
+		enabledFeatures.independentBlend = true;
+		enabledFeatures.pipelineStatisticsQuery = true;
+		m_LogicalDevice = std::make_shared<LogicalRenderingDevice>(m_PhysicalDevice, enabledFeatures);
+
+
+
 	}
 
 	void RendererContext::Shutdown()
