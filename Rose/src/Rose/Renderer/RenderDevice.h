@@ -27,8 +27,28 @@ namespace Rose
 
 			QueueFamily m_QueueFamilyIndicies;
 
-
-
 	};
 
+
+	class LogicalRenderingDevice 
+	{
+		public :
+			LogicalRenderingDevice(const std::shared_ptr<PhysicalRenderingDevice>& physicalDevice, VkPhysicalDeviceFeatures features);
+
+			~LogicalRenderingDevice();
+
+			void FlushOntoScreen(VkCommandBuffer buffer);
+
+			void Shutdown();
+
+
+		private :
+			VkDevice m_Device;
+			std::shared_ptr<PhysicalRenderingDevice> m_PhysicalDevice;
+			VkPhysicalDeviceFeatures m_DeviceFeatures;
+
+			VkCommandPool m_CommandPool;
+			VkQueue m_RenderingQueue;
+
+	};
 }

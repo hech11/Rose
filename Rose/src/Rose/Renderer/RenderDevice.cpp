@@ -132,4 +132,91 @@ namespace Rose
 
 	}
 
+
+
+
+
+
+
+
+	//////////////////////////////////////////////////////////////////////////
+	/////////////////////// LogicalRenderingDevice	//////////////////////////
+	//////////////////////////////////////////////////////////////////////////
+
+
+	LogicalRenderingDevice::LogicalRenderingDevice(const std::shared_ptr<PhysicalRenderingDevice>& physicalDevice, VkPhysicalDeviceFeatures features)
+	{
+
+	}
+
+	LogicalRenderingDevice::~LogicalRenderingDevice()
+	{
+
+	}
+
+
+	void LogicalRenderingDevice::FlushOntoScreen(VkCommandBuffer buffer)
+	{
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+
+		VkSemaphoreCreateInfo semaphoreInfo{};
+		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		VkFenceCreateInfo fenceInfo{};
+		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+
+		VkSemaphore imageReadySemaphore, renderFinishedSemaphore;
+		VkFence framesInFlightFence;
+		vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &imageReadySemaphore);
+		vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &renderFinishedSemaphore);
+		vkCreateFence(m_Device, &fenceInfo, nullptr, &framesInFlightFence);
+
+		VkSemaphore waitSemaphores[] = { imageReadySemaphore };
+		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
+		submitInfo.waitSemaphoreCount = 1;
+		submitInfo.pWaitSemaphores = waitSemaphores;
+		submitInfo.pWaitDstStageMask = waitStages;
+
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &buffer;
+
+		VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
+		submitInfo.signalSemaphoreCount = 1;
+		submitInfo.pSignalSemaphores = signalSemaphores;
+
+		vkQueueSubmit(m_RenderingQueue, 1, &submitInfo, framesInFlightFence);
+		vkWaitForFences(m_Device, 1, &framesInFlightFence, VK_TRUE, UINT64_MAX);
+
+		vkDestroySemaphore(m_Device, imageReadySemaphore, nullptr);
+		vkDestroySemaphore(m_Device, renderFinishedSemaphore, nullptr);
+		vkDestroyFence(m_Device, framesInFlightFence, nullptr);
+
+// 		VkPresentInfoKHR presentInfo{};
+// 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+// 
+// 		presentInfo.waitSemaphoreCount = 1;
+// 		presentInfo.pWaitSemaphores = signalSemaphores;
+
+// 		VkSwapchainKHR swapChains[] = { m_SwapChain };
+// 		presentInfo.swapchainCount = 1;
+// 		presentInfo.pSwapchains = swapChains;
+// 
+// 		presentInfo.pImageIndices = &imageIndex;
+
+//		vkQueuePresentKHR(m_RenderingQueue, &presentInfo);
+
+	}
+
+	void LogicalRenderingDevice::Shutdown()
+	{
+		vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
+
+		vkDeviceWaitIdle(m_Device);
+		vkDestroyDevice(m_Device, nullptr);
+
+	}
+
 }
