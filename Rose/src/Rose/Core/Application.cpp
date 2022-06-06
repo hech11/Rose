@@ -74,13 +74,11 @@ namespace Rose
 		CreateWinGLFWSurface();
 
 
-		ChoosePhysicalDevice();
 		CreateImageViews();
 
 		CreateGraphicsPipeline();
 		CreateFramebuffers();
 		CreateCommandPoolAndBuffer();
-		CreateSyncObjs();
 
 
 	}
@@ -115,7 +113,7 @@ namespace Rose
 
 		}
 
-		vkDeviceWaitIdle(m_VKLogicalDevice);
+		//vkDeviceWaitIdle(m_RenderingContext->);
 	}
 
 	const GLFWwindow* Application::GetWindow() const
@@ -147,247 +145,11 @@ namespace Rose
 
 	void Application::CreateVulkanInstance()
 	{
-
-		VkApplicationInfo appInfo{};
-		appInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-		appInfo.pApplicationName = "test";
-		appInfo.applicationVersion = VK_MAKE_VERSION(1, 2, 0);
-		appInfo.pEngineName = "No Engine";
-		appInfo.engineVersion = VK_MAKE_VERSION(1, 2, 0);
-		appInfo.apiVersion = VK_API_VERSION_1_2;
-
-		VkInstanceCreateInfo createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-		createInfo.pApplicationInfo = &appInfo;
-
-
-		auto ext = GetRequiredExtensions();
-
-		
-		createInfo.enabledExtensionCount = ext.size();
-		createInfo.ppEnabledExtensionNames = ext.data();
-		
-
-
-		createInfo.enabledLayerCount = (uint32_t)m_ValidationLayerNames.size();
-		createInfo.ppEnabledLayerNames = m_ValidationLayerNames.data();
-
-
-		VkDebugUtilsMessengerCreateInfoEXT debugInfo{};
-
-		debugInfo.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT;
-		debugInfo.messageSeverity = VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT;
-		debugInfo.messageType = VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT;
-		debugInfo.pfnUserCallback = callbacks::DebugMSGRCallback;
-
-		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugInfo;
-		VkResult result = vkCreateInstance(&createInfo, nullptr, &m_VKInstance);
-
-
-		callbacks::CreateDebugUtilsMessengerEXT(m_VKInstance, &debugInfo, nullptr, &m_DebugMessagerCallback);
-
-		if (result != VK_SUCCESS) {
-			printf("Failed to create VK instance!\n");
-		}
-
-
-		uint32_t extensionCount = 0;
-		std::vector<VkExtensionProperties> extensions(extensionCount);
-		vkEnumerateInstanceExtensionProperties(nullptr, &extensionCount, extensions.data());
-		LOG("available extensions:\n");
-
-		for (const auto& extension : extensions) {
-			printf("\t%s\n", extension.extensionName);
-		}
-
-
-		
+		m_RenderingContext = std::make_shared<RendererContext>();
+		m_RenderingContext->Init();
 	}
 
-	bool Application::CheckValidationLayerSupport()
-	{
-		uint32_t count;
-		vkEnumerateInstanceLayerProperties(&count, nullptr);
 
-		std::vector<VkLayerProperties> actualLayers;
-		vkEnumerateInstanceLayerProperties(&count, actualLayers.data());
-
-
-		for(const auto& name : m_ValidationLayerNames)
-		{
-			bool found = false;
-			for (const auto& props : actualLayers)
-			{
-				if (!strcmp(name, props.description))
-				{
-					found = true;
-					break;
-				}
-			}
-
-			if (!found)
-				return false;
-
-		}
-
-		return true;
-
-	}
-
-	void Application::ChoosePhysicalDevice()
-	{
-		uint32_t physicalDeviceCount;
-		vkEnumeratePhysicalDevices(m_VKInstance, &physicalDeviceCount, nullptr);
-
-		std::vector<VkPhysicalDevice> devices(physicalDeviceCount);
-		vkEnumeratePhysicalDevices(m_VKInstance, &physicalDeviceCount, devices.data());
-
-
-		m_VKPhysicalDevice = devices[0]; // not great
-		//validate if the device is useable?
-
-
-		// check features once added new API calls to vulkan
-		VkPhysicalDeviceFeatures deviceFeatures{};
-
-		VkPhysicalDeviceProperties deviceProps;
-		vkGetPhysicalDeviceProperties(devices[0], &deviceProps);
-
-		// print info about the device props here
-
-		//  find queue family 
-
-		uint32_t queueFamilyCount = 0;
-		vkGetPhysicalDeviceQueueFamilyProperties(m_VKPhysicalDevice, &queueFamilyCount, nullptr);
-
-		std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
-		vkGetPhysicalDeviceQueueFamilyProperties(m_VKPhysicalDevice, &queueFamilyCount, queueFamilies.data());
-
-		
-
-		int i = 0;
-		for (const auto& queueFamily : queueFamilies) {
-			if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
-				graphicsFamily = i;
-			}
-
-			uint32_t presentSupport;
-			vkGetPhysicalDeviceSurfaceSupportKHR(m_VKPhysicalDevice, i, m_VKWinSurface, &presentSupport);
-			if (presentSupport)
-			{
-				presentFamily = i;
-			}
-
-			if (graphicsFamily.has_value() && presentFamily.has_value())
-				break;
-
-
-			i++;
-		}
-
-		// logical devices
-
-		float queuePriority = 1.0f;
-
-		VkDeviceQueueCreateInfo queueCreateInfo{};
-		queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
-		queueCreateInfo.queueFamilyIndex = graphicsFamily.value();
-		queueCreateInfo.queueCount = 1;
-		queueCreateInfo.pQueuePriorities = &queuePriority;
-
-		VkDeviceCreateInfo createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-
-		createInfo.pQueueCreateInfos = &queueCreateInfo;
-		createInfo.pEnabledFeatures = &deviceFeatures;
-		createInfo.queueCreateInfoCount = 1;
-
-
-		// getting device extensions.... we assume we already support the swap chain..
-		std::vector<const char*> deviceExtentions =
-		{
-			VK_KHR_SWAPCHAIN_EXTENSION_NAME
-		};
-		uint32_t extensionCount;
-		vkEnumerateDeviceExtensionProperties(m_VKPhysicalDevice, nullptr, &extensionCount, nullptr);
-
-		std::vector<VkExtensionProperties> deviceExtsProps(extensionCount);
-		vkEnumerateDeviceExtensionProperties(m_VKPhysicalDevice, nullptr, &extensionCount, deviceExtsProps.data());
-
-
-		std::set<std::string> requiredExts(deviceExtentions.begin(), deviceExtentions.end());
-
-		for (const auto& extension : deviceExtsProps) {
-			requiredExts.erase(extension.extensionName);
-		}
-		for (const auto& names : requiredExts)
-		{
-			LOG("we support these extentions: %s\n", names.c_str());
-		}
-
-		createInfo.enabledExtensionCount = deviceExtentions.size();
-		createInfo.ppEnabledExtensionNames = deviceExtentions.data();
-
-		vkCreateDevice(m_VKPhysicalDevice, &createInfo, nullptr, &m_VKLogicalDevice);
-		vkGetDeviceQueue(m_VKLogicalDevice, graphicsFamily.value(), 0, &m_RenderingQueue);
-
-
-
-		// creating swapchain
-
-		SwapChainDetails swapChainDetails = QuerySwapChainSupport(m_VKPhysicalDevice);
-
-
-		uint32_t imageCount = swapChainDetails.Capabilities.minImageCount + 1;
-
-		VkSurfaceFormatKHR surfaceFormat = ChooseSwapSurfaceFormat(swapChainDetails.Formats);
-		VkPresentModeKHR presentMode = ChooseSwapPresentMode(swapChainDetails.PresentModes);
-		VkExtent2D extent = ChooseSwapExtent(swapChainDetails.Capabilities);
-
-		VkSwapchainCreateInfoKHR swapChainInfo{};
-		swapChainInfo.sType = VK_STRUCTURE_TYPE_SWAPCHAIN_CREATE_INFO_KHR;
-		swapChainInfo.surface = m_VKWinSurface;
-
-		swapChainInfo.minImageCount = imageCount;
-		swapChainInfo.imageFormat = surfaceFormat.format;
-		swapChainInfo.imageColorSpace = surfaceFormat.colorSpace;
-		swapChainInfo.imageExtent = extent;
-		swapChainInfo.imageArrayLayers = 1;
-		swapChainInfo.imageUsage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
-
-		// concurrent only
-		uint32_t familyIndicies[] = { graphicsFamily.value(), presentFamily.value() };
-		if(graphicsFamily.value() != presentFamily.value())
-		{
-			swapChainInfo.imageSharingMode = VK_SHARING_MODE_CONCURRENT;
-			swapChainInfo.queueFamilyIndexCount = 2;
-			swapChainInfo.pQueueFamilyIndices = familyIndicies;
-		}
-		else
-		{
-			swapChainInfo.imageSharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		}
-
-		swapChainInfo.preTransform = swapChainDetails.Capabilities.currentTransform;
-		swapChainInfo.compositeAlpha = VK_COMPOSITE_ALPHA_OPAQUE_BIT_KHR;
-		swapChainInfo.presentMode = presentMode;
-		swapChainInfo.clipped = VK_TRUE;
-
-
-		swapChainInfo.oldSwapchain = VK_NULL_HANDLE;
-
-		vkCreateSwapchainKHR(m_VKLogicalDevice, &swapChainInfo, nullptr, &m_SwapChain);
-
-		uint32_t swapchainImageCount;
-		vkGetSwapchainImagesKHR(m_VKLogicalDevice, m_SwapChain, &swapchainImageCount, nullptr);
-		m_SwapChainImages.resize(swapchainImageCount);
-		vkGetSwapchainImagesKHR(m_VKLogicalDevice, m_SwapChain, &swapchainImageCount, m_SwapChainImages.data());
-
-		m_SwapChainImageFormat = surfaceFormat.format;
-		m_SwapChainExtent = extent;
-
-
-	}
 
 	void Application::CreateImageViews()
 	{
@@ -411,7 +173,7 @@ namespace Rose
 			info.subresourceRange.baseArrayLayer = 0;
 			info.subresourceRange.layerCount = 1;
 
-			vkCreateImageView(m_VKLogicalDevice, &info, nullptr, &m_SwapChainImageViews[i]);
+			vkCreateImageView(m_RenderingContext->GetLogicalDevice()->GetDevice(), &info, nullptr, &m_SwapChainImageViews[i]);
 		}
 	}
 
@@ -439,7 +201,7 @@ namespace Rose
 			framebufferInfo.height = m_SwapChainExtent.height;
 			framebufferInfo.layers = 1;
 
-			vkCreateFramebuffer(m_VKLogicalDevice, &framebufferInfo, nullptr, &m_Framebuffers[i]);
+			vkCreateFramebuffer(m_RenderingContext->GetLogicalDevice()->GetDevice(), &framebufferInfo, nullptr, &m_Framebuffers[i]);
 
 		}
 	}
@@ -462,9 +224,9 @@ namespace Rose
 		VkCommandPoolCreateInfo createInfo{};
 		createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
 		createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		createInfo.queueFamilyIndex = graphicsFamily.value();
+		createInfo.queueFamilyIndex = m_RenderingContext->GetPhysicalDevice()->GetQueueFamily().Graphics;
 
-		vkCreateCommandPool(m_VKLogicalDevice, &createInfo, nullptr, &m_VKCommandPool);
+		vkCreateCommandPool(m_RenderingContext->GetLogicalDevice()->GetDevice(), &createInfo, nullptr, &m_VKCommandPool);
 
 		CreateVertexBuffer();
 
@@ -476,26 +238,11 @@ namespace Rose
 		allocInfo.commandPool = m_VKCommandPool;
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		allocInfo.commandBufferCount = 1;
-		vkAllocateCommandBuffers(m_VKLogicalDevice, &allocInfo, &m_VKCommandBuffer);
+		vkAllocateCommandBuffers(m_RenderingContext->GetLogicalDevice()->GetDevice(), &allocInfo, &m_VKCommandBuffer);
 
 
 	}
 
-	void Application::CreateSyncObjs()
-	{
-		VkSemaphoreCreateInfo semaphoreInfo{};
-		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-		VkFenceCreateInfo fenceInfo{};
-		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-		vkCreateSemaphore(m_VKLogicalDevice, &semaphoreInfo, nullptr, &m_ImageReadySemaphore);
-		vkCreateSemaphore(m_VKLogicalDevice, &semaphoreInfo, nullptr, &m_RenderFinishedSemaphore);
-		vkCreateFence(m_VKLogicalDevice, &fenceInfo, nullptr, &m_FramesInFlightFence);
-
-
-	}
 
 	void Application::RecordCommandBuffer(uint32_t imageIndex)
 	{
@@ -536,49 +283,16 @@ namespace Rose
 
 	void Application::DrawOntoScreen()
 	{
-		vkWaitForFences(m_VKLogicalDevice, 1, &m_FramesInFlightFence, VK_TRUE, UINT64_MAX);
-		vkResetFences(m_VKLogicalDevice, 1, &m_FramesInFlightFence);
+		//vkWaitForFences(m_VKLogicalDevice, 1, &m_FramesInFlightFence, VK_TRUE, UINT64_MAX);
+		//vkResetFences(m_VKLogicalDevice, 1, &m_FramesInFlightFence);
 
 		uint32_t imageIndex;
-		vkAcquireNextImageKHR(m_VKLogicalDevice, m_SwapChain, UINT64_MAX, m_ImageReadySemaphore, VK_NULL_HANDLE, &imageIndex);
+		//vkAcquireNextImageKHR(m_VKLogicalDevice, m_SwapChain, UINT64_MAX, m_ImageReadySemaphore, VK_NULL_HANDLE, &imageIndex);
 		vkResetCommandBuffer(m_VKCommandBuffer, 0);
-
-
-		
 
 		RecordCommandBuffer(imageIndex);
 
-		VkSubmitInfo submitInfo{};
-		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-
-		VkSemaphore waitSemaphores[] = { m_ImageReadySemaphore };
-		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
-		submitInfo.waitSemaphoreCount = 1;
-		submitInfo.pWaitSemaphores = waitSemaphores;
-		submitInfo.pWaitDstStageMask = waitStages;
-
-		submitInfo.commandBufferCount = 1;
-		submitInfo.pCommandBuffers = &m_VKCommandBuffer;
-
-		VkSemaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
-		submitInfo.signalSemaphoreCount = 1;
-		submitInfo.pSignalSemaphores = signalSemaphores;
-
-		vkQueueSubmit(m_RenderingQueue, 1, &submitInfo, m_FramesInFlightFence);
-
-		VkPresentInfoKHR presentInfo{};
-		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-
-		presentInfo.waitSemaphoreCount = 1;
-		presentInfo.pWaitSemaphores = signalSemaphores;
-
-		VkSwapchainKHR swapChains[] = { m_SwapChain };
-		presentInfo.swapchainCount = 1;
-		presentInfo.pSwapchains = swapChains;
-
-		presentInfo.pImageIndices = &imageIndex;
-
-		vkQueuePresentKHR(m_RenderingQueue, &presentInfo);
+		m_RenderingContext->GetLogicalDevice()->FlushOntoScreen(m_VKCommandBuffer);
 
 	}
 
@@ -586,20 +300,20 @@ namespace Rose
 	{
 	    SwapChainDetails result;
 
-		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_VKPhysicalDevice, m_VKWinSurface, &result.Capabilities);
+		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_RenderingContext->GetPhysicalDevice()->GetDevice(), m_VKWinSurface, &result.Capabilities);
 
 		uint32_t formatCount;
-		vkGetPhysicalDeviceSurfaceFormatsKHR(m_VKPhysicalDevice, m_VKWinSurface, &formatCount, nullptr);
+		vkGetPhysicalDeviceSurfaceFormatsKHR(m_RenderingContext->GetPhysicalDevice()->GetDevice(), m_VKWinSurface, &formatCount, nullptr);
 
 		result.Formats.resize(formatCount);
-		vkGetPhysicalDeviceSurfaceFormatsKHR(m_VKPhysicalDevice, m_VKWinSurface, &formatCount, result.Formats.data());
+		vkGetPhysicalDeviceSurfaceFormatsKHR(m_RenderingContext->GetPhysicalDevice()->GetDevice(), m_VKWinSurface, &formatCount, result.Formats.data());
 
 		uint32_t presentModeCount;
-		vkGetPhysicalDeviceSurfacePresentModesKHR(m_VKPhysicalDevice, m_VKWinSurface, &presentModeCount, nullptr);
+		vkGetPhysicalDeviceSurfacePresentModesKHR(m_RenderingContext->GetPhysicalDevice()->GetDevice(), m_VKWinSurface, &presentModeCount, nullptr);
 
 
 		result.PresentModes.resize(presentModeCount);
-		vkGetPhysicalDeviceSurfacePresentModesKHR(m_VKPhysicalDevice, m_VKWinSurface, &presentModeCount, result.PresentModes.data());
+		vkGetPhysicalDeviceSurfacePresentModesKHR(m_RenderingContext->GetPhysicalDevice()->GetDevice(), m_VKWinSurface, &presentModeCount, result.PresentModes.data());
 
 
 	    return result;
@@ -655,7 +369,7 @@ namespace Rose
 		createInfo.hwnd = glfwGetWin32Window(m_Window);
 		createInfo.hinstance = GetModuleHandle(nullptr);
 
-		vkCreateWin32SurfaceKHR(m_VKInstance, &createInfo, nullptr, &m_VKWinSurface);
+		//vkCreateWin32SurfaceKHR(m_VKInstance, &createInfo, nullptr, &m_VKWinSurface);
 
 //		glfwCreateWindowSurface(m_VKInstance, m_Window, nullptr, &m_VKWinSurface);
 	}
@@ -663,52 +377,33 @@ namespace Rose
 	void Application::CleanUp()
 	{
 
-		callbacks::DestroyDebugUtilsMessengerEXT(m_VKInstance, m_DebugMessagerCallback, nullptr);
-
 		m_VBO->FreeMemory();
 		m_IBO->FreeMemory();
 
-		vkDestroySemaphore(m_VKLogicalDevice, m_ImageReadySemaphore, nullptr);
-		vkDestroySemaphore(m_VKLogicalDevice, m_RenderFinishedSemaphore, nullptr);
-		vkDestroyFence(m_VKLogicalDevice, m_FramesInFlightFence, nullptr);
 
-		vkDestroyCommandPool(m_VKLogicalDevice, m_VKCommandPool, nullptr);
+		vkDestroyCommandPool(m_RenderingContext->GetLogicalDevice()->GetDevice(), m_VKCommandPool, nullptr);
 
 		m_Shader->DestroyPipeline();
 
 		for (auto fb : m_Framebuffers) {
-			vkDestroyFramebuffer(m_VKLogicalDevice, fb, nullptr);
+			vkDestroyFramebuffer(m_RenderingContext->GetLogicalDevice()->GetDevice(), fb, nullptr);
 		}
 
 		for (auto view : m_SwapChainImageViews) {
-			vkDestroyImageView(m_VKLogicalDevice, view, nullptr);
+			vkDestroyImageView(m_RenderingContext->GetLogicalDevice()->GetDevice(), view, nullptr);
 		}
 
 
-		vkDestroySwapchainKHR(m_VKLogicalDevice, m_SwapChain, nullptr);
-		vkDestroyDevice(m_VKLogicalDevice, nullptr);
+		vkDestroySwapchainKHR(m_RenderingContext->GetLogicalDevice()->GetDevice(), m_SwapChain, nullptr);
+		vkDestroyDevice(m_RenderingContext->GetLogicalDevice()->GetDevice(), nullptr);
 
-		vkDestroySurfaceKHR(m_VKInstance, m_VKWinSurface, nullptr);
-		vkDestroyInstance(m_VKInstance, nullptr);
+		m_RenderingContext->Shutdown();
 
 		glfwDestroyWindow(m_Window);
 		glfwTerminate();
-	}
-
-
-	std::vector<const char*> Application::GetRequiredExtensions()
-	{
-		uint32_t glfwExtensionCount = 0;
-		const char** glfwExtensions;
-
-		glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-
-		std::vector<const char*> result(glfwExtensions, glfwExtensions + glfwExtensionCount);
-
-		result.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-
-		return result;
 
 	}
+
+
 
 	}

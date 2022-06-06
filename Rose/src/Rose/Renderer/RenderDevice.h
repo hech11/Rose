@@ -3,6 +3,7 @@
 
 #include <vulkan1.2.182.0/include/Vulkan/vulkan/vulkan.h>
 #include <memory>
+#include <vector>
 
 namespace Rose
 {
@@ -18,6 +19,9 @@ namespace Rose
 			PhysicalRenderingDevice();
 			~PhysicalRenderingDevice();
 
+			const QueueFamily& GetQueueFamily() const { return m_QueueFamilyIndicies; }
+			const VkPhysicalDevice& GetDevice() const { return m_PhysicalDevice; } 
+
 
 		private:
 			VkPhysicalDevice m_PhysicalDevice{};
@@ -25,8 +29,10 @@ namespace Rose
 			VkPhysicalDeviceFeatures m_PhysicalDeviceFeatures{};
 			VkPhysicalDeviceMemoryProperties m_PhysicalMemProps{};
 
-			QueueFamily m_QueueFamilyIndicies;
+			std::vector<VkDeviceQueueCreateInfo> m_DeviceQueueInfos;
 
+			QueueFamily m_QueueFamilyIndicies;
+			friend class LogicalRenderingDevice;
 	};
 
 
@@ -38,8 +44,9 @@ namespace Rose
 			~LogicalRenderingDevice();
 
 			void FlushOntoScreen(VkCommandBuffer buffer);
-
 			void Shutdown();
+
+			VkDevice& GetDevice() { return m_Device; }
 
 
 		private :

@@ -71,7 +71,6 @@ namespace Rose
 
 
 		extentsions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
-		extentsions.push_back("VK_LAYER_KHRONOS_validation");
 
 
 		VkInstanceCreateInfo createInfo{};
@@ -82,9 +81,9 @@ namespace Rose
 
 		createInfo.enabledExtensionCount = extentsions.size();
 		createInfo.ppEnabledExtensionNames = extentsions.data();
+		
 
 
-		// validation layers
 
 		const char* validationLayerName = "VK_LAYER_KHRONOS_validation";
 		uint32_t instanceLayerCount;
@@ -117,12 +116,7 @@ namespace Rose
 			LOG("VK_LAYER_VALIDATION could not be found!\n");
 		}
 
-
-
-
-		vkCreateInstance(&createInfo, nullptr, &s_VKInstance);
-
-
+		
 
 		VkDebugUtilsMessengerCreateInfoEXT debugInfo{};
 
@@ -132,6 +126,10 @@ namespace Rose
 		debugInfo.pfnUserCallback = callbacks::DebugMSGRCallback;
 
 		createInfo.pNext = (VkDebugUtilsMessengerCreateInfoEXT*)&debugInfo;
+		VkResult result = vkCreateInstance(&createInfo, nullptr, &s_VKInstance);
+		if (result == VK_FALSE)
+			LOG("ERROR!\n");
+
 
 		callbacks::CreateDebugUtilsMessengerEXT(s_VKInstance, &debugInfo, nullptr, &m_DebugMessagerCallback);
 

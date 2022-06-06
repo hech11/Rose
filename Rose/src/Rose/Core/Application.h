@@ -17,6 +17,7 @@
 #include "Rose/Renderer/API/Shader.h"
 #include "Rose/Renderer/API/VertexBuffer.h"
 #include "Rose/Renderer/API/IndexBuffer.h"
+#include "Rose/Renderer/RendererContext.h"
 
 
 namespace Rose
@@ -77,9 +78,7 @@ namespace Rose
 			const GLFWwindow* GetWindow() const;
 			GLFWwindow* GetWindow();
 
-
-			VkDevice GetLogicalDevice() const { return m_VKLogicalDevice; }
-			VkPhysicalDevice GetPhysicalDevice() const { return m_VKPhysicalDevice; }
+			const std::shared_ptr<RendererContext>& GetContext() const { return m_RenderingContext; }
 			VkExtent2D GetSwapChainExtent() const { return m_SwapChainExtent; }
 			VkFormat GetSwapChainImageFormat() const { return m_SwapChainImageFormat; }
 
@@ -93,9 +92,7 @@ namespace Rose
 		private :
 			void MakeWindow();
 			void CreateVulkanInstance();
-			bool CheckValidationLayerSupport();
 
-			void ChoosePhysicalDevice();
 			void CreateImageViews();
 
 			void CreateGraphicsPipeline();
@@ -105,7 +102,6 @@ namespace Rose
 			void CreateIndexBuffer();
 
 			void CreateCommandPoolAndBuffer();
-			void CreateSyncObjs();
 
 			void RecordCommandBuffer(uint32_t imageIndex);
 
@@ -124,17 +120,10 @@ namespace Rose
 			void CleanUp();
 
 
-			std::vector<const char*> GetRequiredExtensions();
-
 		private :
 			GLFWwindow* m_Window = nullptr;
-			VkInstance m_VKInstance;
-			VkPhysicalDevice m_VKPhysicalDevice = VK_NULL_HANDLE;
-			VkDevice m_VKLogicalDevice;
-			VkQueue m_RenderingQueue;
 
-			std::optional<uint32_t> graphicsFamily;
-			std::optional<uint32_t> presentFamily;
+			std::shared_ptr<RendererContext> m_RenderingContext;
 
 			VkSwapchainKHR m_SwapChain;
 			std::vector<VkImage> m_SwapChainImages;
@@ -150,19 +139,13 @@ namespace Rose
 			std::shared_ptr<Rose::IndexBuffer> m_IBO;
 
 
-
-
 			std::vector<VkFramebuffer> m_Framebuffers;
 
 			VkCommandPool m_VKCommandPool;
 			VkCommandBuffer m_VKCommandBuffer;
 
-			VkSemaphore m_ImageReadySemaphore, m_RenderFinishedSemaphore;
-			VkFence m_FramesInFlightFence;
-
 			std::shared_ptr<Shader> m_Shader;
 
-			VkDebugUtilsMessengerEXT m_DebugMessagerCallback;
 			VkSurfaceKHR m_VKWinSurface;
 
 

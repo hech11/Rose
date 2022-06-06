@@ -18,6 +18,9 @@ namespace Rose
 			void Init();
 			void Shutdown();
 
+			const std::shared_ptr<LogicalRenderingDevice>& GetLogicalDevice() const { return m_LogicalDevice; }
+			const std::shared_ptr<PhysicalRenderingDevice>& GetPhysicalDevice() const { return m_PhysicalDevice; }
+
 		public :
 			static VkInstance& GetInstance() { return s_VKInstance; }
 

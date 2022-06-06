@@ -27,7 +27,7 @@ namespace Rose
 
 	void IndexBuffer::Bind()
 	{
-		const VkDevice& logicalDeivce = Application::Get().GetLogicalDevice();
+		const VkDevice& logicalDeivce = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 		vkBindBufferMemory(logicalDeivce, m_BufferID, m_DeviceMemory, 0);
 	}
 
@@ -35,7 +35,7 @@ namespace Rose
 	{
 		m_Size = size;
 
-		const VkDevice& logicalDeivce = Application::Get().GetLogicalDevice();
+		const VkDevice& logicalDeivce = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 
 		void* temp;
 		vkMapMemory(logicalDeivce, m_DeviceMemory, 0, m_Size, 0, &temp);
@@ -46,7 +46,7 @@ namespace Rose
 	void IndexBuffer::FreeMemory()
 	{
 		m_IsFreed = true;
-		const VkDevice& logicalDeivce = Application::Get().GetLogicalDevice();
+		const VkDevice& logicalDeivce = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 		vkDestroyBuffer(logicalDeivce, m_BufferID, nullptr);
 		vkFreeMemory(logicalDeivce, m_DeviceMemory, nullptr);
 	}
@@ -62,8 +62,8 @@ namespace Rose
 
 
 
-		const VkDevice& logicalDeivce = Application::Get().GetLogicalDevice();
-		const VkPhysicalDevice& physicalDevice = Application::Get().GetPhysicalDevice();
+		const VkDevice& logicalDeivce = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
+		const VkPhysicalDevice& physicalDevice = Application::Get().GetContext()->GetPhysicalDevice()->GetDevice();
 
 		vkCreateBuffer(logicalDeivce, &bufferInfo, nullptr, &m_BufferID);
 

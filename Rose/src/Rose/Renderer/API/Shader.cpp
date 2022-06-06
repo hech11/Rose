@@ -62,10 +62,11 @@ namespace Rose
 
 
 
+		const VkDevice& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 
 		for (auto&& [type, module] : m_ShaderModules)
 		{
-			vkDestroyShaderModule(Application::Get().GetLogicalDevice(), module, nullptr);
+			vkDestroyShaderModule(device, module, nullptr);
 		}
 
 	}
@@ -77,17 +78,19 @@ namespace Rose
 	void Shader::DestroyPipeline()
 	{
 
-		vkDestroyBuffer(Application::Get().GetLogicalDevice(), m_UniformBuffer, nullptr);
-		vkFreeMemory(Application::Get().GetLogicalDevice(), m_UBDeviceMemory, nullptr);
 
-		vkDestroyDescriptorSetLayout(Application::Get().GetLogicalDevice(), m_DescriptorSetLayout, nullptr);
-		vkDestroyDescriptorPool(Application::Get().GetLogicalDevice(), m_DescriptorPool, nullptr);
+		const VkDevice& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
+		vkDestroyBuffer(device, m_UniformBuffer, nullptr);
+		vkFreeMemory(device, m_UBDeviceMemory, nullptr);
+
+		vkDestroyDescriptorSetLayout(device, m_DescriptorSetLayout, nullptr);
+		vkDestroyDescriptorPool(device, m_DescriptorPool, nullptr);
 
 
 
-		vkDestroyPipeline(Application::Get().GetLogicalDevice(), m_GraphicsPipeline, nullptr);
-		vkDestroyPipelineLayout(Application::Get().GetLogicalDevice(), m_PipelineLayout, nullptr);
-		vkDestroyRenderPass(Application::Get().GetLogicalDevice(), m_RenderPass, nullptr);
+		vkDestroyPipeline(device, m_GraphicsPipeline, nullptr);
+		vkDestroyPipelineLayout(device, m_PipelineLayout, nullptr);
+		vkDestroyRenderPass(device, m_RenderPass, nullptr);
 	}
 
 	void Shader::ParseShaders(const std::string& filepath)
@@ -168,7 +171,10 @@ namespace Rose
 		createInfo.pCode = sprvCode.data();
 
 		VkShaderModule result;
-		vkCreateShaderModule(Application::Get().GetLogicalDevice(), &createInfo, nullptr, &result);
+
+		const VkDevice& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
+		vkCreateShaderModule(device, &createInfo, nullptr, &result);
+
 
 
 		return result;
@@ -176,6 +182,9 @@ namespace Rose
 
 	void Shader::CreateShaderStagePipeline()
 	{
+
+		const VkDevice& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
+
 		std::vector<VkPipelineShaderStageCreateInfo> shaderStages;
 		for (auto&& [type, module] : m_ShaderModules)
 		{
@@ -280,7 +289,7 @@ namespace Rose
 		pipelineLayoutInfo.setLayoutCount = 1;
 		pipelineLayoutInfo.pSetLayouts = &m_DescriptorSetLayout;
 
-		vkCreatePipelineLayout(Application::Get().GetLogicalDevice(), &pipelineLayoutInfo, nullptr, &m_PipelineLayout);
+		vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_PipelineLayout);
 		
 		VkAttachmentDescription colorAttachment{};
 		colorAttachment.format = Application::Get().GetSwapChainImageFormat();
@@ -309,7 +318,7 @@ namespace Rose
 		renderPassInfo.pSubpasses = &subpass;
 
 
-		vkCreateRenderPass(Application::Get().GetLogicalDevice(), &renderPassInfo, nullptr, &m_RenderPass);
+		vkCreateRenderPass(device, &renderPassInfo, nullptr, &m_RenderPass);
 
 
 
@@ -333,13 +342,15 @@ namespace Rose
 		pipelineInfo.basePipelineHandle = VK_NULL_HANDLE;
 		pipelineInfo.basePipelineIndex = -1;
 
-		vkCreateGraphicsPipelines(Application::Get().GetLogicalDevice(), VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_GraphicsPipeline);
+		vkCreateGraphicsPipelines(device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &m_GraphicsPipeline);
 	}
 
 	
 
 	void Shader::CreateDiscriptorSetLayout()
 	{
+
+		const VkDevice& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 
 		VkDescriptorSetLayoutBinding uboLayoutBinding{};
 		uboLayoutBinding.binding = 0;
@@ -352,11 +363,12 @@ namespace Rose
 		layoutInfo.bindingCount = 1;
 		layoutInfo.pBindings = &uboLayoutBinding;
 
-		vkCreateDescriptorSetLayout(Application::Get().GetLogicalDevice(), &layoutInfo, nullptr, &m_DescriptorSetLayout);
+		vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &m_DescriptorSetLayout);
 	}
 
 	void Shader::CreateUniformBuffer()
 	{
+
 		VkDeviceSize bufferSize = sizeof(UniformBufferData);
 
 
@@ -365,7 +377,7 @@ namespace Rose
 		bufferInfo.size = bufferSize;
 		bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		const auto& VKLogicalDevice = Application::Get().GetLogicalDevice();
+		const auto& VKLogicalDevice = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 
 		vkCreateBuffer(VKLogicalDevice, &bufferInfo, nullptr, &m_UniformBuffer);
 
@@ -374,7 +386,7 @@ namespace Rose
 
 
 		VkPhysicalDeviceMemoryProperties memProperties;
-		vkGetPhysicalDeviceMemoryProperties(Application::Get().GetPhysicalDevice(), &memProperties);
+		vkGetPhysicalDeviceMemoryProperties(Application::Get().GetContext()->GetPhysicalDevice()->GetDevice(), &memProperties);
 
 		uint32_t memTypeIndex = 0;
 		uint32_t propFilter = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
@@ -394,20 +406,27 @@ namespace Rose
 		if (vkAllocateMemory(VKLogicalDevice, &allocInfo, nullptr, &m_UBDeviceMemory) != VK_SUCCESS)
 			ASSERT();
 
-		vkBindBufferMemory(Application::Get().GetLogicalDevice(), m_UniformBuffer, m_UBDeviceMemory, 0);
+		vkBindBufferMemory(VKLogicalDevice, m_UniformBuffer, m_UBDeviceMemory, 0);
 	}
 
 	void Shader::UpdateUniformBuffer(UniformBufferData& ubo)
 	{
+		const auto& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
+
+
 		void* data;
-		vkMapMemory(Application::Get().GetLogicalDevice(), m_UBDeviceMemory, 0, sizeof(ubo), 0, &data);
+		vkMapMemory(device, m_UBDeviceMemory, 0, sizeof(ubo), 0, &data);
 		memcpy(data, &ubo, sizeof(ubo));
-		vkUnmapMemory(Application::Get().GetLogicalDevice(), m_UBDeviceMemory);
+		vkUnmapMemory(device, m_UBDeviceMemory);
 
 	}
 
 	void Shader::CreateDescriptorPool()
 	{
+
+
+		const auto& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
+
 		VkDescriptorPoolSize poolSize{};
 		poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		poolSize.descriptorCount = 1;
@@ -419,11 +438,12 @@ namespace Rose
 
 		poolInfo.maxSets = 1;
 
-		vkCreateDescriptorPool(Application::Get().GetLogicalDevice(), &poolInfo, nullptr, &m_DescriptorPool);
+		vkCreateDescriptorPool(device, &poolInfo, nullptr, &m_DescriptorPool);
 	}
 
 	void Shader::CreateDescriptorSets()
 	{
+		const auto& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 
 		std::vector<VkDescriptorSetLayout> layouts(1, m_DescriptorSetLayout); // TODO: multiple frames in flight
 		VkDescriptorSetAllocateInfo allocInfo{};
@@ -431,7 +451,7 @@ namespace Rose
 		allocInfo.descriptorPool = m_DescriptorPool;
 		allocInfo.descriptorSetCount = 1;
 		allocInfo.pSetLayouts = layouts.data();
-		vkAllocateDescriptorSets(Application::Get().GetLogicalDevice(), &allocInfo, &m_DescriptorSet);
+		vkAllocateDescriptorSets(device, &allocInfo, &m_DescriptorSet);
 
 
 		VkDescriptorBufferInfo bufferInfo{};
@@ -449,7 +469,7 @@ namespace Rose
 
 		descWrite.pBufferInfo = &bufferInfo;
 
-		vkUpdateDescriptorSets(Application::Get().GetLogicalDevice(), 1, &descWrite, 0, nullptr);
+		vkUpdateDescriptorSets(device, 1, &descWrite, 0, nullptr);
 
 	}
 

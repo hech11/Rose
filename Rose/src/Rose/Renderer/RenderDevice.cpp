@@ -110,6 +110,7 @@ namespace Rose
 			queueCreateInfo.queueFamilyIndex = m_QueueFamilyIndicies.Graphics;
 			queueCreateInfo.queueCount = 1;
 			queueCreateInfo.pQueuePriorities = &queuePriority;
+			m_DeviceQueueInfos.push_back(queueCreateInfo);
 		}
 
 		if (queueTypesToQuery & VK_QUEUE_TRANSFER_BIT)
@@ -119,6 +120,8 @@ namespace Rose
 			queueInfo.queueFamilyIndex = m_QueueFamilyIndicies.Transfer;
 			queueInfo.queueCount = 1;
 			queueInfo.pQueuePriorities = &queuePriority;
+
+			m_DeviceQueueInfos.push_back(queueInfo);
 
 		}
 
@@ -146,6 +149,32 @@ namespace Rose
 
 	LogicalRenderingDevice::LogicalRenderingDevice(const std::shared_ptr<PhysicalRenderingDevice>& physicalDevice, VkPhysicalDeviceFeatures features)
 	{
+		m_PhysicalDevice = physicalDevice;
+		std::vector<const char*> deviceExtensions;
+		deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+
+		VkDeviceCreateInfo deviceCreateInfo = {};
+		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+		deviceCreateInfo.queueCreateInfoCount = static_cast<uint32_t>(physicalDevice->m_DeviceQueueInfos.size());;
+		deviceCreateInfo.pQueueCreateInfos = physicalDevice->m_DeviceQueueInfos.data();
+		deviceCreateInfo.pEnabledFeatures = &features;
+
+		
+		if (deviceExtensions.size() > 0)
+		{
+			deviceCreateInfo.enabledExtensionCount = (uint32_t)deviceExtensions.size();
+			deviceCreateInfo.ppEnabledExtensionNames = deviceExtensions.data();
+		}
+
+		VkResult result = vkCreateDevice(m_PhysicalDevice->GetDevice(), &deviceCreateInfo, nullptr, &m_Device);
+
+		VkCommandPoolCreateInfo cmdPoolInfo = {};
+		cmdPoolInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+		cmdPoolInfo.queueFamilyIndex = m_PhysicalDevice->GetQueueFamily().Graphics;
+		cmdPoolInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+		vkCreateCommandPool(m_Device, &cmdPoolInfo, nullptr, &m_CommandPool);
+
+		vkGetDeviceQueue(m_Device, m_PhysicalDevice->GetQueueFamily().Graphics, 0, &m_RenderingQueue);
 
 	}
 
