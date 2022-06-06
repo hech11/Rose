@@ -81,6 +81,9 @@ namespace Rose
 			VkDescriptorSet& GetDescriptorSet() { return m_DescriptorSet; }
 			const VkDescriptorSet& GetDescriptorSet() const { return m_DescriptorSet; }
 
+
+			VkDescriptorPool& GetDescriptorPool() { return m_DescriptorPool; }
+
 			void CreateDiscriptorSetLayout();
 
 			void CreateDescriptorPool();

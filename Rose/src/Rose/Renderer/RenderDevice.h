@@ -58,6 +58,8 @@ namespace Rose
 				return m_ImageIndex;
 			}
 
+			VkQueue GetQueue() const { return m_RenderingQueue; }
+
 
 		private :
 			VkDevice m_Device;

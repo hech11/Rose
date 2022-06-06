@@ -58,7 +58,7 @@ namespace Rose
 		s_INSTANCE = this;
 
 		
-			
+		m_ImguiLayer = new ImguiLayer;
 			
 		m_VertexData = {
 			{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
@@ -79,6 +79,7 @@ namespace Rose
 		CreateGraphicsPipeline();
 		CreateFramebuffers();
 		CreateCommandPoolAndBuffer();
+		m_ImguiLayer->Init();
 
 
 	}
@@ -255,8 +256,10 @@ namespace Rose
 	void Application::DrawOntoScreen()
 	{
 		m_RenderingContext->GetLogicalDevice()->BeginCommand(m_VKCommandBuffer);
-
 		RecordCommandBuffer(m_RenderingContext->GetLogicalDevice()->GetImageIndex());
+
+		m_ImguiLayer->Begin();
+		m_ImguiLayer->End();
 
 		m_RenderingContext->GetLogicalDevice()->FlushOntoScreen(m_VKCommandBuffer);
 
@@ -285,8 +288,14 @@ namespace Rose
 		}
 
 		m_SwapChain->Destroy();
+		m_ImguiLayer->Shutdown();
+
+
 		m_RenderingContext->GetLogicalDevice()->Shutdown();
 		m_RenderingContext->Shutdown();
+
+
+
 
 		glfwDestroyWindow(m_Window);
 		glfwTerminate();

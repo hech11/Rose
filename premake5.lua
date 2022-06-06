@@ -55,6 +55,8 @@ group "Core"
 			"%{prj.name}/vendor/imgui/*.cpp",
 			"%{prj.name}/vendor/imgui/backends/imgui_impl_vulkan.h",
 			"%{prj.name}/vendor/imgui/backends/imgui_impl_vulkan.cpp",
+			"%{prj.name}/vendor/imgui/backends/imgui_impl_glfw.cpp",
+			"%{prj.name}/vendor/imgui/backends/imgui_impl_glfw.cpp",
 			"%{prj.name}/vendor/imgui_internal.h",
 			"%{prj.name}/vendor/imgui/imgui.h",
 			"%{prj.name}/vendor/imgui/imgui.cpp",
