@@ -216,14 +216,14 @@ namespace Rose
 		VkViewport viewport{};
 		viewport.x = 0.0f;
 		viewport.y = 0.0f;
-		viewport.width = (float)Application::Get().GetSwapChainExtent().width;
-		viewport.height = (float)Application::Get().GetSwapChainExtent().height;
+		viewport.width = (float)Application::Get().GetSwapChain()->GetExtent2D().width;
+		viewport.height = (float)Application::Get().GetSwapChain()->GetExtent2D().height;
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
 
 		VkRect2D scissor{};
 		scissor.offset = { 0, 0 };
-		scissor.extent = Application::Get().GetSwapChainExtent();
+		scissor.extent = Application::Get().GetSwapChain()->GetExtent2D();
 
 		VkPipelineViewportStateCreateInfo viewportState{};
 		viewportState.sType = VK_STRUCTURE_TYPE_PIPELINE_VIEWPORT_STATE_CREATE_INFO;
@@ -292,7 +292,7 @@ namespace Rose
 		vkCreatePipelineLayout(device, &pipelineLayoutInfo, nullptr, &m_PipelineLayout);
 		
 		VkAttachmentDescription colorAttachment{};
-		colorAttachment.format = Application::Get().GetSwapChainImageFormat();
+		colorAttachment.format = Application::Get().GetSwapChain()->GetColorFormat();
 		colorAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
 		colorAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
 		colorAttachment.storeOp = VK_ATTACHMENT_STORE_OP_STORE;

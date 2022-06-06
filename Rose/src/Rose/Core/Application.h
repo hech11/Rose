@@ -1,11 +1,7 @@
 #pragma once
 
 
-#define VK_USE_PLATFORM_WIN32_KHR
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3native.h>
+
 
 
 #include <vector>
@@ -18,6 +14,7 @@
 #include "Rose/Renderer/API/VertexBuffer.h"
 #include "Rose/Renderer/API/IndexBuffer.h"
 #include "Rose/Renderer/RendererContext.h"
+#include "Rose/Renderer/SwapChain.h"
 
 
 namespace Rose
@@ -57,12 +54,7 @@ namespace Rose
 		}
 	};
 
-	struct SwapChainDetails {
-		VkSurfaceCapabilitiesKHR Capabilities;
-		std::vector<VkSurfaceFormatKHR> Formats;
-		std::vector<VkPresentModeKHR> PresentModes;
-	};
-
+	
 
 
 	class Application
@@ -78,9 +70,13 @@ namespace Rose
 			const GLFWwindow* GetWindow() const;
 			GLFWwindow* GetWindow();
 
+			VkSurfaceKHR GetWindowSurface() const { return m_SwapChain->GetWindowSurface(); }
+
+
+			std::shared_ptr<SwapChain>& GetSwapChain() { return m_SwapChain; }
+
 			const std::shared_ptr<RendererContext>& GetContext() const { return m_RenderingContext; }
-			VkExtent2D GetSwapChainExtent() const { return m_SwapChainExtent; }
-			VkFormat GetSwapChainImageFormat() const { return m_SwapChainImageFormat; }
+			
 
 		public :
 
@@ -93,7 +89,6 @@ namespace Rose
 			void MakeWindow();
 			void CreateVulkanInstance();
 
-			void CreateImageViews();
 
 			void CreateGraphicsPipeline();
 			void CreateFramebuffers();
@@ -108,12 +103,6 @@ namespace Rose
 
 			void DrawOntoScreen();
 
-			SwapChainDetails QuerySwapChainSupport(VkPhysicalDevice device);
-
-			VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats);
-			VkPresentModeKHR  ChooseSwapPresentMode(const std::vector<VkPresentModeKHR >& presents);
-			VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
-
 
 			void CreateWinGLFWSurface();
 
@@ -124,12 +113,7 @@ namespace Rose
 			GLFWwindow* m_Window = nullptr;
 
 			std::shared_ptr<RendererContext> m_RenderingContext;
-
-			VkSwapchainKHR m_SwapChain;
-			std::vector<VkImage> m_SwapChainImages;
-			std::vector<VkImageView> m_SwapChainImageViews;
-			VkFormat m_SwapChainImageFormat;
-			VkExtent2D m_SwapChainExtent;
+			std::shared_ptr<SwapChain> m_SwapChain;
 
 
 			std::vector<Rose::VertexData> m_VertexData;
@@ -141,19 +125,14 @@ namespace Rose
 
 			std::vector<VkFramebuffer> m_Framebuffers;
 
-			VkCommandPool m_VKCommandPool;
 			VkCommandBuffer m_VKCommandBuffer;
 
 			std::shared_ptr<Shader> m_Shader;
 
-			VkSurfaceKHR m_VKWinSurface;
-
-
-			const std::vector<const char*> m_ValidationLayerNames = {
-				"VK_LAYER_KHRONOS_validation",
-			};
 
 			static Application* s_INSTANCE;
+
+			
 
 	};
 }

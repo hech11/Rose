@@ -6,8 +6,6 @@
 
 namespace Rose
 {
-
-
 	class RendererContext
 	{
 
@@ -26,7 +24,8 @@ namespace Rose
 
 		private :
 			std::shared_ptr<PhysicalRenderingDevice> m_PhysicalDevice;
-			std::shared_ptr <LogicalRenderingDevice> m_LogicalDevice;
+			std::shared_ptr<LogicalRenderingDevice> m_LogicalDevice;
+
 
 			static VkInstance s_VKInstance;
 			VkDebugUtilsMessengerEXT m_DebugMessagerCallback = VK_NULL_HANDLE;

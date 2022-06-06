@@ -4,6 +4,7 @@
 #include "Rose/Core/Log.h"
 
 #include <vector>
+#include "Rose/Core/Application.h"
 
 namespace Rose
 {
@@ -81,7 +82,12 @@ namespace Rose
 			{
 				if (queueFamily.queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 					m_QueueFamilyIndicies.Graphics = i;
+
+
+					m_QueueFamilyIndicies.Present = i;
 					found = 1;
+					i++;
+					continue;
 				}
 			}
 
@@ -91,6 +97,8 @@ namespace Rose
 				{
 					m_QueueFamilyIndicies.Transfer = i;
 					found = 2;
+					i++;
+					continue;
 				}
 			}
 
@@ -102,7 +110,6 @@ namespace Rose
 
 
 
-		float queuePriority = 1.0f;
 		if (queueTypesToQuery & VK_QUEUE_GRAPHICS_BIT)
 		{
 			VkDeviceQueueCreateInfo queueCreateInfo{};
@@ -151,7 +158,7 @@ namespace Rose
 	{
 		m_PhysicalDevice = physicalDevice;
 		std::vector<const char*> deviceExtensions;
-		deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+		deviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME); // TODO: we just assume we already have access to the swapchain...
 
 		VkDeviceCreateInfo deviceCreateInfo = {};
 		deviceCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
@@ -176,6 +183,19 @@ namespace Rose
 
 		vkGetDeviceQueue(m_Device, m_PhysicalDevice->GetQueueFamily().Graphics, 0, &m_RenderingQueue);
 
+
+		VkSemaphoreCreateInfo semaphoreInfo{};
+		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
+
+		VkFenceCreateInfo fenceInfo{};
+		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
+
+
+		vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &m_ImageReadySemaphore);
+		vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &m_RenderFinishedSemaphore);
+		vkCreateFence(m_Device, &fenceInfo, nullptr, &m_FramesInFlightFence);
+
 	}
 
 	LogicalRenderingDevice::~LogicalRenderingDevice()
@@ -186,24 +206,12 @@ namespace Rose
 
 	void LogicalRenderingDevice::FlushOntoScreen(VkCommandBuffer buffer)
 	{
+
+
 		VkSubmitInfo submitInfo{};
 		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
 
-		VkSemaphoreCreateInfo semaphoreInfo{};
-		semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-
-		VkFenceCreateInfo fenceInfo{};
-		fenceInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-		fenceInfo.flags = VK_FENCE_CREATE_SIGNALED_BIT;
-
-
-		VkSemaphore imageReadySemaphore, renderFinishedSemaphore;
-		VkFence framesInFlightFence;
-		vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &imageReadySemaphore);
-		vkCreateSemaphore(m_Device, &semaphoreInfo, nullptr, &renderFinishedSemaphore);
-		vkCreateFence(m_Device, &fenceInfo, nullptr, &framesInFlightFence);
-
-		VkSemaphore waitSemaphores[] = { imageReadySemaphore };
+		VkSemaphore waitSemaphores[] = { m_ImageReadySemaphore };
 		VkPipelineStageFlags waitStages[] = { VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT };
 		submitInfo.waitSemaphoreCount = 1;
 		submitInfo.pWaitSemaphores = waitSemaphores;
@@ -212,30 +220,27 @@ namespace Rose
 		submitInfo.commandBufferCount = 1;
 		submitInfo.pCommandBuffers = &buffer;
 
-		VkSemaphore signalSemaphores[] = { renderFinishedSemaphore };
+		VkSemaphore signalSemaphores[] = { m_RenderFinishedSemaphore };
 		submitInfo.signalSemaphoreCount = 1;
 		submitInfo.pSignalSemaphores = signalSemaphores;
 
-		vkQueueSubmit(m_RenderingQueue, 1, &submitInfo, framesInFlightFence);
-		vkWaitForFences(m_Device, 1, &framesInFlightFence, VK_TRUE, UINT64_MAX);
+		vkQueueSubmit(m_RenderingQueue, 1, &submitInfo, m_FramesInFlightFence);
+		vkWaitForFences(m_Device, 1, &m_FramesInFlightFence, VK_TRUE, UINT64_MAX);
 
-		vkDestroySemaphore(m_Device, imageReadySemaphore, nullptr);
-		vkDestroySemaphore(m_Device, renderFinishedSemaphore, nullptr);
-		vkDestroyFence(m_Device, framesInFlightFence, nullptr);
+		
+ 		VkPresentInfoKHR presentInfo{};
+ 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+ 
+ 		presentInfo.waitSemaphoreCount = 1;
+ 		presentInfo.pWaitSemaphores = signalSemaphores;
 
-// 		VkPresentInfoKHR presentInfo{};
-// 		presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-// 
-// 		presentInfo.waitSemaphoreCount = 1;
-// 		presentInfo.pWaitSemaphores = signalSemaphores;
+ 		VkSwapchainKHR swapChains[] = { Application::Get().GetSwapChain()->GetSwapChain() };
+ 		presentInfo.swapchainCount = 1;
+ 		presentInfo.pSwapchains = swapChains;
+ 
+ 		presentInfo.pImageIndices = &m_ImageIndex;
 
-// 		VkSwapchainKHR swapChains[] = { m_SwapChain };
-// 		presentInfo.swapchainCount = 1;
-// 		presentInfo.pSwapchains = swapChains;
-// 
-// 		presentInfo.pImageIndices = &imageIndex;
-
-//		vkQueuePresentKHR(m_RenderingQueue, &presentInfo);
+		vkQueuePresentKHR(m_RenderingQueue, &presentInfo);
 
 	}
 
@@ -243,9 +248,25 @@ namespace Rose
 	{
 		vkDestroyCommandPool(m_Device, m_CommandPool, nullptr);
 
+		vkDestroySemaphore(m_Device, m_ImageReadySemaphore, nullptr);
+		vkDestroySemaphore(m_Device, m_RenderFinishedSemaphore, nullptr);
+		vkDestroyFence(m_Device, m_FramesInFlightFence, nullptr);
+
 		vkDeviceWaitIdle(m_Device);
 		vkDestroyDevice(m_Device, nullptr);
 
+
+	}
+
+	void LogicalRenderingDevice::BeginCommand(VkCommandBuffer& buffer)
+	{
+		vkWaitForFences(m_Device, 1, &m_FramesInFlightFence, VK_TRUE, UINT64_MAX);
+		vkResetFences(m_Device, 1, &m_FramesInFlightFence);
+
+		uint32_t imageIndex = 0;
+		vkAcquireNextImageKHR(m_Device, Application::Get().GetSwapChain()->GetSwapChain(), UINT64_MAX, m_ImageReadySemaphore, VK_NULL_HANDLE, &imageIndex);
+		m_ImageIndex = imageIndex;
+		vkResetCommandBuffer(buffer, 0);
 	}
 
 }

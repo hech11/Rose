@@ -2,7 +2,8 @@
 #include <vector>
 
 #include <glfw/glfw3.h>
-#include "../Core/LOG.h"
+#include "Rose/Core/LOG.h"
+
 
 
 namespace Rose
@@ -48,7 +49,6 @@ namespace Rose
 
 	RendererContext::~RendererContext()
 	{
-		vkDestroyInstance(s_VKInstance, nullptr);
 	}
 
 
@@ -135,7 +135,6 @@ namespace Rose
 
 
 		m_PhysicalDevice = std::make_shared<PhysicalRenderingDevice>();
-
 		VkPhysicalDeviceFeatures enabledFeatures;
 		memset(&enabledFeatures, 0, sizeof(VkPhysicalDeviceFeatures));
 		enabledFeatures.samplerAnisotropy = true;
@@ -146,7 +145,7 @@ namespace Rose
 		m_LogicalDevice = std::make_shared<LogicalRenderingDevice>(m_PhysicalDevice, enabledFeatures);
 
 
-
+		
 	}
 
 	void RendererContext::Shutdown()

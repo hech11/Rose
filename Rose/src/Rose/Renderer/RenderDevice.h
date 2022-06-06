@@ -11,6 +11,7 @@ namespace Rose
 	struct QueueFamily
 	{
 		int32_t Graphics, Transfer; // TODO: we don't support compute cmd queues yet....
+		int32_t Present;
 	};
 
 	class PhysicalRenderingDevice
@@ -32,6 +33,8 @@ namespace Rose
 			std::vector<VkDeviceQueueCreateInfo> m_DeviceQueueInfos;
 
 			QueueFamily m_QueueFamilyIndicies;
+			float queuePriority = 0.0f;
+
 			friend class LogicalRenderingDevice;
 	};
 
@@ -46,7 +49,14 @@ namespace Rose
 			void FlushOntoScreen(VkCommandBuffer buffer);
 			void Shutdown();
 
+			VkCommandPool GetCommandPool() { return m_CommandPool; }
+
+			void BeginCommand(VkCommandBuffer& buffer);
+
 			VkDevice& GetDevice() { return m_Device; }
+			uint32_t GetImageIndex() {
+				return m_ImageIndex;
+			}
 
 
 		private :
@@ -57,5 +67,9 @@ namespace Rose
 			VkCommandPool m_CommandPool;
 			VkQueue m_RenderingQueue;
 
+			VkSemaphore m_ImageReadySemaphore, m_RenderFinishedSemaphore;
+			VkFence m_FramesInFlightFence;
+
+			uint32_t m_ImageIndex;
 	};
 }

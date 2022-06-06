@@ -10,6 +10,8 @@
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/gtx/transform.hpp"
 
+#include <glfw/glfw3.h>
+
 
 namespace Rose
 {
@@ -70,11 +72,9 @@ namespace Rose
 			0, 1, 2, 2, 3, 0
 		};
 		MakeWindow();
-		CreateVulkanInstance();
 		CreateWinGLFWSurface();
+		CreateVulkanInstance();
 
-
-		CreateImageViews();
 
 		CreateGraphicsPipeline();
 		CreateFramebuffers();
@@ -113,7 +113,7 @@ namespace Rose
 
 		}
 
-		//vkDeviceWaitIdle(m_RenderingContext->);
+		vkDeviceWaitIdle(m_RenderingContext->GetLogicalDevice()->GetDevice());
 	}
 
 	const GLFWwindow* Application::GetWindow() const
@@ -147,35 +147,14 @@ namespace Rose
 	{
 		m_RenderingContext = std::make_shared<RendererContext>();
 		m_RenderingContext->Init();
+
+
+		m_SwapChain->SetVKInstance(m_RenderingContext->GetInstance());
+		m_SwapChain->CreateWindowSurface(m_Window);
+		m_SwapChain->Init(m_RenderingContext->GetInstance(), m_RenderingContext->GetLogicalDevice());
 	}
 
 
-
-	void Application::CreateImageViews()
-	{
-		m_SwapChainImageViews.resize(m_SwapChainImages.size());
-
-		for (uint32_t i = 0; i < m_SwapChainImages.size(); i++)
-		{
-
-			VkImageViewCreateInfo info{};
-			info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-			info.image = m_SwapChainImages[i];
-			info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-			info.format = m_SwapChainImageFormat;
-			info.components.r = VK_COMPONENT_SWIZZLE_IDENTITY;
-			info.components.g = VK_COMPONENT_SWIZZLE_IDENTITY;
-			info.components.b = VK_COMPONENT_SWIZZLE_IDENTITY;
-			info.components.a = VK_COMPONENT_SWIZZLE_IDENTITY;
-			info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-			info.subresourceRange.baseMipLevel = 0;
-			info.subresourceRange.levelCount = 1;
-			info.subresourceRange.baseArrayLayer = 0;
-			info.subresourceRange.layerCount = 1;
-
-			vkCreateImageView(m_RenderingContext->GetLogicalDevice()->GetDevice(), &info, nullptr, &m_SwapChainImageViews[i]);
-		}
-	}
 
 	void Application::CreateGraphicsPipeline()
 	{
@@ -185,11 +164,11 @@ namespace Rose
 
 	void Application::CreateFramebuffers()
 	{
-		m_Framebuffers.resize(m_SwapChainImageViews.size());
+		m_Framebuffers.resize(m_SwapChain->GetImageViews().size());
 
-		for (size_t i = 0; i < m_SwapChainImageViews.size(); i++) {
+		for (size_t i = 0; i < m_SwapChain->GetImageViews().size(); i++) {
 			VkImageView attachments[] = {
-				m_SwapChainImageViews[i]
+				m_SwapChain->GetImageViews()[i]
 			};
 
 			VkFramebufferCreateInfo framebufferInfo{};
@@ -197,8 +176,8 @@ namespace Rose
 			framebufferInfo.renderPass = m_Shader->GetRenderPass();
 			framebufferInfo.attachmentCount = 1;
 			framebufferInfo.pAttachments = attachments;
-			framebufferInfo.width = m_SwapChainExtent.width;
-			framebufferInfo.height = m_SwapChainExtent.height;
+			framebufferInfo.width = m_SwapChain->GetExtent2D().width;
+			framebufferInfo.height = m_SwapChain->GetExtent2D().height;
 			framebufferInfo.layers = 1;
 
 			vkCreateFramebuffer(m_RenderingContext->GetLogicalDevice()->GetDevice(), &framebufferInfo, nullptr, &m_Framebuffers[i]);
@@ -221,21 +200,13 @@ namespace Rose
 
 	void Application::CreateCommandPoolAndBuffer()
 	{
-		VkCommandPoolCreateInfo createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-		createInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-		createInfo.queueFamilyIndex = m_RenderingContext->GetPhysicalDevice()->GetQueueFamily().Graphics;
-
-		vkCreateCommandPool(m_RenderingContext->GetLogicalDevice()->GetDevice(), &createInfo, nullptr, &m_VKCommandPool);
 
 		CreateVertexBuffer();
-
 		CreateIndexBuffer();
-
 
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-		allocInfo.commandPool = m_VKCommandPool;
+		allocInfo.commandPool = m_RenderingContext->GetLogicalDevice()->GetCommandPool();
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		allocInfo.commandBufferCount = 1;
 		vkAllocateCommandBuffers(m_RenderingContext->GetLogicalDevice()->GetDevice(), &allocInfo, &m_VKCommandBuffer);
@@ -256,7 +227,7 @@ namespace Rose
 		renderPassInfo.renderPass = m_Shader->GetRenderPass();
 		renderPassInfo.framebuffer = m_Framebuffers[imageIndex];
 		renderPassInfo.renderArea.offset = { 0, 0 };
-		renderPassInfo.renderArea.extent = m_SwapChainExtent;
+		renderPassInfo.renderArea.extent = m_SwapChain->GetExtent2D();
 
 		VkClearValue clearColor = { {{0.1f, 0.1f, 0.1f, 1.0f}} };
 		renderPassInfo.clearValueCount = 1;
@@ -283,95 +254,20 @@ namespace Rose
 
 	void Application::DrawOntoScreen()
 	{
-		//vkWaitForFences(m_VKLogicalDevice, 1, &m_FramesInFlightFence, VK_TRUE, UINT64_MAX);
-		//vkResetFences(m_VKLogicalDevice, 1, &m_FramesInFlightFence);
+		m_RenderingContext->GetLogicalDevice()->BeginCommand(m_VKCommandBuffer);
 
-		uint32_t imageIndex;
-		//vkAcquireNextImageKHR(m_VKLogicalDevice, m_SwapChain, UINT64_MAX, m_ImageReadySemaphore, VK_NULL_HANDLE, &imageIndex);
-		vkResetCommandBuffer(m_VKCommandBuffer, 0);
-
-		RecordCommandBuffer(imageIndex);
+		RecordCommandBuffer(m_RenderingContext->GetLogicalDevice()->GetImageIndex());
 
 		m_RenderingContext->GetLogicalDevice()->FlushOntoScreen(m_VKCommandBuffer);
 
 	}
 
-	SwapChainDetails Application::QuerySwapChainSupport(VkPhysicalDevice device)
-	{
-	    SwapChainDetails result;
-
-		vkGetPhysicalDeviceSurfaceCapabilitiesKHR(m_RenderingContext->GetPhysicalDevice()->GetDevice(), m_VKWinSurface, &result.Capabilities);
-
-		uint32_t formatCount;
-		vkGetPhysicalDeviceSurfaceFormatsKHR(m_RenderingContext->GetPhysicalDevice()->GetDevice(), m_VKWinSurface, &formatCount, nullptr);
-
-		result.Formats.resize(formatCount);
-		vkGetPhysicalDeviceSurfaceFormatsKHR(m_RenderingContext->GetPhysicalDevice()->GetDevice(), m_VKWinSurface, &formatCount, result.Formats.data());
-
-		uint32_t presentModeCount;
-		vkGetPhysicalDeviceSurfacePresentModesKHR(m_RenderingContext->GetPhysicalDevice()->GetDevice(), m_VKWinSurface, &presentModeCount, nullptr);
-
-
-		result.PresentModes.resize(presentModeCount);
-		vkGetPhysicalDeviceSurfacePresentModesKHR(m_RenderingContext->GetPhysicalDevice()->GetDevice(), m_VKWinSurface, &presentModeCount, result.PresentModes.data());
-
-
-	    return result;
-	}
-
-	VkSurfaceFormatKHR Application::ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats)
-	{
-		for (const auto& availableFormat : formats) {
-			if (availableFormat.format == VK_FORMAT_B8G8R8A8_SRGB && availableFormat.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
-				return availableFormat;
-			}
-		}
-
-		return formats[0];
-	}
-
-	VkPresentModeKHR Application::ChooseSwapPresentMode(const std::vector<VkPresentModeKHR >& presents)
-	{
-		for (const auto& availablePresentMode : presents) {
-			if (availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR) {
-				return availablePresentMode;
-			}
-		}
-
-		return VK_PRESENT_MODE_FIFO_KHR;
-	}
-
-	VkExtent2D Application::ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities)
-	{
-		if (capabilities.currentExtent.width != std::numeric_limits<uint32_t>::max()) {
-			return capabilities.currentExtent;
-		}
-		else {
-			int width, height;
-			glfwGetFramebufferSize(m_Window, &width, &height);
-
-			VkExtent2D actualExtent = {
-				static_cast<uint32_t>(width),
-				static_cast<uint32_t>(height)
-			};
-
-			actualExtent.width = std::clamp(actualExtent.width, capabilities.minImageExtent.width, capabilities.maxImageExtent.width);
-			actualExtent.height = std::clamp(actualExtent.height, capabilities.minImageExtent.height, capabilities.maxImageExtent.height);
-
-			return actualExtent;
-		}
-	}
+	
 
 	void Application::CreateWinGLFWSurface()
 	{
-		VkWin32SurfaceCreateInfoKHR createInfo{};
-		createInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-		createInfo.hwnd = glfwGetWin32Window(m_Window);
-		createInfo.hinstance = GetModuleHandle(nullptr);
+ 		m_SwapChain = std::make_shared<SwapChain>();
 
-		//vkCreateWin32SurfaceKHR(m_VKInstance, &createInfo, nullptr, &m_VKWinSurface);
-
-//		glfwCreateWindowSurface(m_VKInstance, m_Window, nullptr, &m_VKWinSurface);
 	}
 
 	void Application::CleanUp()
@@ -381,7 +277,6 @@ namespace Rose
 		m_IBO->FreeMemory();
 
 
-		vkDestroyCommandPool(m_RenderingContext->GetLogicalDevice()->GetDevice(), m_VKCommandPool, nullptr);
 
 		m_Shader->DestroyPipeline();
 
@@ -389,14 +284,8 @@ namespace Rose
 			vkDestroyFramebuffer(m_RenderingContext->GetLogicalDevice()->GetDevice(), fb, nullptr);
 		}
 
-		for (auto view : m_SwapChainImageViews) {
-			vkDestroyImageView(m_RenderingContext->GetLogicalDevice()->GetDevice(), view, nullptr);
-		}
-
-
-		vkDestroySwapchainKHR(m_RenderingContext->GetLogicalDevice()->GetDevice(), m_SwapChain, nullptr);
-		vkDestroyDevice(m_RenderingContext->GetLogicalDevice()->GetDevice(), nullptr);
-
+		m_SwapChain->Destroy();
+		m_RenderingContext->GetLogicalDevice()->Shutdown();
 		m_RenderingContext->Shutdown();
 
 		glfwDestroyWindow(m_Window);
@@ -406,4 +295,4 @@ namespace Rose
 
 
 
-	}
+}
