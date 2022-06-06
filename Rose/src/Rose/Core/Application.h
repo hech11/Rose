@@ -16,6 +16,8 @@
 
 #include "Rose/Renderer/API/Shader.h"
 #include "Rose/Renderer/API/VertexBuffer.h"
+#include "Rose/Renderer/API/IndexBuffer.h"
+
 
 namespace Rose
 {
@@ -142,12 +144,12 @@ namespace Rose
 
 
 			std::vector<Rose::VertexData> m_VertexData;
-			std::shared_ptr<Rose::VertexBuffer> m_VBO;
-
-
 			std::vector<uint32_t> m_IndexData;
-			VkBuffer m_IndexBuffer;
-			VkDeviceMemory m_IBDeviceMemory;
+
+			std::shared_ptr<Rose::VertexBuffer> m_VBO;
+			std::shared_ptr<Rose::IndexBuffer> m_IBO;
+
+
 
 
 			std::vector<VkFramebuffer> m_Framebuffers;

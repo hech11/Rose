@@ -1,11 +1,11 @@
-#include "VertexBuffer.h"
+#include "IndexBuffer.h"
 #include "Rose/Core/Application.h"
 
 
 namespace Rose
 {
 
-	VertexBuffer::VertexBuffer(void* data, uint32_t size )
+	IndexBuffer::IndexBuffer(void* data, uint32_t size) 
 		: m_Size(size)
 	{
 		RecreateBuffer();
@@ -13,40 +13,37 @@ namespace Rose
 		SetData(data, size);
 	}
 
-	VertexBuffer::VertexBuffer(uint32_t size) 
+	IndexBuffer::IndexBuffer(uint32_t size)
 		: m_Size(size)
 	{
-		
 		RecreateBuffer();
 	}
 
-	VertexBuffer::~VertexBuffer()
+	IndexBuffer::~IndexBuffer()
 	{
-		if(!m_IsFreed)
+		if (!m_IsFreed)
 			FreeMemory();
 	}
 
-	void VertexBuffer::Bind()
+	void IndexBuffer::Bind()
 	{
 		const VkDevice& logicalDeivce = Application::Get().GetLogicalDevice();
-		vkBindBufferMemory(logicalDeivce, m_BufferID , m_DeviceMemory, 0);
+		vkBindBufferMemory(logicalDeivce, m_BufferID, m_DeviceMemory, 0);
 	}
 
-	void VertexBuffer::SetData(void* data, uint32_t size)
+	void IndexBuffer::SetData(void* data, uint32_t size)
 	{
-
 		m_Size = size;
+
 		const VkDevice& logicalDeivce = Application::Get().GetLogicalDevice();
 
-
-		void* temp = nullptr;
-		vkMapMemory(logicalDeivce, m_DeviceMemory, 0, size, 0, &temp);
+		void* temp;
+		vkMapMemory(logicalDeivce, m_DeviceMemory, 0, m_Size, 0, &temp);
 		memcpy(temp, data, size);
 		vkUnmapMemory(logicalDeivce, m_DeviceMemory);
-
 	}
 
-	void VertexBuffer::FreeMemory()
+	void IndexBuffer::FreeMemory()
 	{
 		m_IsFreed = true;
 		const VkDevice& logicalDeivce = Application::Get().GetLogicalDevice();
@@ -54,23 +51,21 @@ namespace Rose
 		vkFreeMemory(logicalDeivce, m_DeviceMemory, nullptr);
 	}
 
-	void VertexBuffer::RecreateBuffer()
+	void IndexBuffer::RecreateBuffer()
 	{
-		m_IsFreed = false;
-
 
 		VkBufferCreateInfo bufferInfo{};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = m_Size;
-		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+		bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		const VkDevice& logicalDeivce = Application::Get().GetLogicalDevice();
 
+
+		const VkDevice& logicalDeivce = Application::Get().GetLogicalDevice();
 		const VkPhysicalDevice& physicalDevice = Application::Get().GetPhysicalDevice();
 
 		vkCreateBuffer(logicalDeivce, &bufferInfo, nullptr, &m_BufferID);
-
 
 		VkMemoryRequirements memRequirements;
 		vkGetBufferMemoryRequirements(logicalDeivce, m_BufferID, &memRequirements);
@@ -95,6 +90,9 @@ namespace Rose
 		allocInfo.memoryTypeIndex = memTypeIndex;
 
 		vkAllocateMemory(logicalDeivce, &allocInfo, nullptr, &m_DeviceMemory);
+
+
+
 	}
 
 }
