@@ -1,11 +1,7 @@
 #pragma once
 
 
-#define VK_USE_PLATFORM_WIN32_KHR
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-#define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3native.h>
+
 
 
 #include <vector>
@@ -17,6 +13,8 @@
 #include "Rose/Renderer/API/Shader.h"
 #include "Rose/Renderer/API/VertexBuffer.h"
 #include "Rose/Renderer/API/IndexBuffer.h"
+#include "Rose/Renderer/RendererContext.h"
+#include "Rose/Renderer/SwapChain.h"
 
 
 namespace Rose
@@ -56,12 +54,7 @@ namespace Rose
 		}
 	};
 
-	struct SwapChainDetails {
-		VkSurfaceCapabilitiesKHR Capabilities;
-		std::vector<VkSurfaceFormatKHR> Formats;
-		std::vector<VkPresentModeKHR> PresentModes;
-	};
-
+	
 
 
 	class Application
@@ -77,11 +70,13 @@ namespace Rose
 			const GLFWwindow* GetWindow() const;
 			GLFWwindow* GetWindow();
 
+			VkSurfaceKHR GetWindowSurface() const { return m_SwapChain->GetWindowSurface(); }
 
-			VkDevice GetLogicalDevice() const { return m_VKLogicalDevice; }
-			VkPhysicalDevice GetPhysicalDevice() const { return m_VKPhysicalDevice; }
-			VkExtent2D GetSwapChainExtent() const { return m_SwapChainExtent; }
-			VkFormat GetSwapChainImageFormat() const { return m_SwapChainImageFormat; }
+
+			std::shared_ptr<SwapChain>& GetSwapChain() { return m_SwapChain; }
+
+			const std::shared_ptr<RendererContext>& GetContext() const { return m_RenderingContext; }
+			
 
 		public :
 
@@ -93,10 +88,7 @@ namespace Rose
 		private :
 			void MakeWindow();
 			void CreateVulkanInstance();
-			bool CheckValidationLayerSupport();
 
-			void ChoosePhysicalDevice();
-			void CreateImageViews();
 
 			void CreateGraphicsPipeline();
 			void CreateFramebuffers();
@@ -105,18 +97,11 @@ namespace Rose
 			void CreateIndexBuffer();
 
 			void CreateCommandPoolAndBuffer();
-			void CreateSyncObjs();
 
 			void RecordCommandBuffer(uint32_t imageIndex);
 
 
 			void DrawOntoScreen();
-
-			SwapChainDetails QuerySwapChainSupport(VkPhysicalDevice device);
-
-			VkSurfaceFormatKHR ChooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& formats);
-			VkPresentModeKHR  ChooseSwapPresentMode(const std::vector<VkPresentModeKHR >& presents);
-			VkExtent2D ChooseSwapExtent(const VkSurfaceCapabilitiesKHR& capabilities);
 
 
 			void CreateWinGLFWSurface();
@@ -124,23 +109,11 @@ namespace Rose
 			void CleanUp();
 
 
-			std::vector<const char*> GetRequiredExtensions();
-
 		private :
 			GLFWwindow* m_Window = nullptr;
-			VkInstance m_VKInstance;
-			VkPhysicalDevice m_VKPhysicalDevice = VK_NULL_HANDLE;
-			VkDevice m_VKLogicalDevice;
-			VkQueue m_RenderingQueue;
 
-			std::optional<uint32_t> graphicsFamily;
-			std::optional<uint32_t> presentFamily;
-
-			VkSwapchainKHR m_SwapChain;
-			std::vector<VkImage> m_SwapChainImages;
-			std::vector<VkImageView> m_SwapChainImageViews;
-			VkFormat m_SwapChainImageFormat;
-			VkExtent2D m_SwapChainExtent;
+			std::shared_ptr<RendererContext> m_RenderingContext;
+			std::shared_ptr<SwapChain> m_SwapChain;
 
 
 			std::vector<Rose::VertexData> m_VertexData;
@@ -150,27 +123,16 @@ namespace Rose
 			std::shared_ptr<Rose::IndexBuffer> m_IBO;
 
 
-
-
 			std::vector<VkFramebuffer> m_Framebuffers;
 
-			VkCommandPool m_VKCommandPool;
 			VkCommandBuffer m_VKCommandBuffer;
-
-			VkSemaphore m_ImageReadySemaphore, m_RenderFinishedSemaphore;
-			VkFence m_FramesInFlightFence;
 
 			std::shared_ptr<Shader> m_Shader;
 
-			VkDebugUtilsMessengerEXT m_DebugMessagerCallback;
-			VkSurfaceKHR m_VKWinSurface;
-
-
-			const std::vector<const char*> m_ValidationLayerNames = {
-				"VK_LAYER_KHRONOS_validation",
-			};
 
 			static Application* s_INSTANCE;
+
+			
 
 	};
 }

@@ -28,7 +28,7 @@ namespace Rose
 
 	void VertexBuffer::Bind()
 	{
-		const VkDevice& logicalDeivce = Application::Get().GetLogicalDevice();
+		const VkDevice& logicalDeivce = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 		vkBindBufferMemory(logicalDeivce, m_BufferID , m_DeviceMemory, 0);
 	}
 
@@ -36,7 +36,7 @@ namespace Rose
 	{
 
 		m_Size = size;
-		const VkDevice& logicalDeivce = Application::Get().GetLogicalDevice();
+		const VkDevice& logicalDeivce = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 
 
 		void* temp = nullptr;
@@ -49,7 +49,7 @@ namespace Rose
 	void VertexBuffer::FreeMemory()
 	{
 		m_IsFreed = true;
-		const VkDevice& logicalDeivce = Application::Get().GetLogicalDevice();
+		const VkDevice& logicalDeivce = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 		vkDestroyBuffer(logicalDeivce, m_BufferID, nullptr);
 		vkFreeMemory(logicalDeivce, m_DeviceMemory, nullptr);
 	}
@@ -65,9 +65,9 @@ namespace Rose
 		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-		const VkDevice& logicalDeivce = Application::Get().GetLogicalDevice();
+		const VkDevice& logicalDeivce = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
+		const VkPhysicalDevice& physicalDevice = Application::Get().GetContext()->GetPhysicalDevice()->GetDevice();
 
-		const VkPhysicalDevice& physicalDevice = Application::Get().GetPhysicalDevice();
 
 		vkCreateBuffer(logicalDeivce, &bufferInfo, nullptr, &m_BufferID);
 
