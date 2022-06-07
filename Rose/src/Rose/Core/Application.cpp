@@ -22,7 +22,7 @@ namespace Rose
 
 	Application* Application::s_INSTANCE = nullptr;
 
-	
+	static bool useCamera = false;
 	Application::Application()
 	{
 		s_INSTANCE = this;
@@ -60,27 +60,34 @@ namespace Rose
 		CleanUp();
 	}
 
+	static glm::vec3 quadPos = {0.0f, 0.0f, 0.0f};
+
 	void Application::Run()
 	{
 		m_ImguiLayer->Init();
 
+
+		m_Camera = std::make_shared<Rose::PerspectiveCameraController>(glm::perspective(glm::radians(60.0f), 16.0f / 9.0f, 0.1f, 1000.0f));
+		m_Camera->GetCam().SetPosition({ 0.0f, 0.0f, -10.0f });
 		UniformBufferData ubo;
-		ubo.ViewProj = glm::perspective(glm::radians(45.0f), 16.0f / 9.0f, 0.1f, 1000.0f) * glm::translate(glm::mat4(1.0f), { 0.5f, 0.0f, -10.0f });
-		glm::vec3 pos = {0.0f, 0.0f, 0.0f};
-		static float increment = 0.0f;
+		
+
+
 
 		while (!glfwWindowShouldClose(m_Window))
 		{
+			m_Camera->OnUpdate(0.016f);
+
+			ubo.Model = glm::translate(glm::mat4(1.0f), quadPos);
+			if (useCamera)
+			{
+				ubo.ViewProj = m_Camera->GetCam().GetProjView();
+			} else {
+				ubo.ViewProj = glm::perspective(glm::radians(60.0f), 16.0f / 9.0f, 0.1f, 1000.0f) * glm::translate(glm::mat4(1.0f), { 0.0f, 0.0f, -10.0f });
+			}
+
 
 			glfwPollEvents();
-
-			ubo.Model = glm::translate(glm::mat4(1.0f), pos);
-
-			pos.x = sin(increment);
-			pos.y = cos(increment);
-			pos.z = sin(increment);
-			increment+=0.0016f*15.0f;
-
 			m_Shader->UpdateUniformBuffer(ubo);
 			DrawOntoScreen();
 
@@ -91,7 +98,7 @@ namespace Rose
 
 	void Application::OnKeyPressedEvent(int key, int action)
 	{
-
+		m_Camera->OnKeyPressedEvent(key, action);
 	}
 
 	void Application::OnKeyReleasedEvent(int key)
@@ -99,23 +106,27 @@ namespace Rose
 
 	}
 
-	void Application::OnMouseMovedEvent(int button, int action)
+	void Application::OnMouseMovedEvent(int x, int y)
 	{
+		m_Camera->OnMouseMovedEvent(x, y);
 
 	}
 
 	void Application::OnMouseButtonClickedEvent(int button, int action)
 	{
+		m_Camera->OnMouseButtonPressedEvent(button, action);
 
 	}
 
 	void Application::OnMouseButtonReleasedEvent(int button)
 	{
+		m_Camera->OnMouseButtonReleasedEvent(button);
 
 	}
 
 	void Application::OnMouseScrollWheelUsed(float x, float y)
 	{
+		m_Camera->OnMouseScrollEvent(x, y);
 
 	}
 
@@ -165,6 +176,11 @@ namespace Rose
 		glfwSetScrollCallback(m_Window, [](GLFWwindow* window, double x, double y)
 		{
 				Application::Get().OnMouseScrollWheelUsed(x, y);
+
+		});
+		glfwSetCursorPosCallback(m_Window, [](GLFWwindow* window, double x, double y)
+		{
+				Application::Get().OnMouseMovedEvent(x, y);
 
 		});
 
@@ -340,8 +356,8 @@ namespace Rose
 	{
 		ImGui::Begin("Test window!");
 		ImGui::Text("This is some text");
-		static float abcTest = 123.0f;
-		ImGui::SliderFloat("Test slider", &abcTest, 0.0f, 200.0f);
+		ImGui::SliderFloat3("quad pos", &quadPos.x, -10.0f, 10.0f);
+		ImGui::Checkbox("Use camera", &useCamera);
 		ImGui::End();
 	}
 

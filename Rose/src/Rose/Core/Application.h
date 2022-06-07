@@ -18,6 +18,8 @@
 
 #include "Rose/Editor/ImguiLayer.h"
 
+#include "Rose/Renderer/PerspectiveCamera.h"
+
 
 namespace Rose
 {
@@ -141,6 +143,8 @@ namespace Rose
 
 			std::shared_ptr<Rose::VertexBuffer> m_VBO;
 			std::shared_ptr<Rose::IndexBuffer> m_IBO;
+
+			std::shared_ptr<Rose::PerspectiveCameraController> m_Camera;
 
 
 			std::vector<VkFramebuffer> m_Framebuffers;

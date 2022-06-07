@@ -215,9 +215,9 @@ namespace Rose
 
 		VkViewport viewport{};
 		viewport.x = 0.0f;
-		viewport.y = 0.0f;
+		viewport.y = (float)Application::Get().GetSwapChain()->GetExtent2D().height;
 		viewport.width = (float)Application::Get().GetSwapChain()->GetExtent2D().width;
-		viewport.height = (float)Application::Get().GetSwapChain()->GetExtent2D().height;
+		viewport.height = -(float)Application::Get().GetSwapChain()->GetExtent2D().height;
 		viewport.minDepth = 0.0f;
 		viewport.maxDepth = 1.0f;
 
@@ -240,7 +240,7 @@ namespace Rose
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
 		rasterizer.cullMode = VK_CULL_MODE_NONE;
-		//rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
 
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f;
