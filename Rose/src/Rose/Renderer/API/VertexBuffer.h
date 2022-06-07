@@ -29,7 +29,7 @@ namespace Rose
 			void RecreateBuffer();
 		private:
 			VkBuffer m_BufferID;
-			VmaAllocation m_MemoryAllocaton;
+			VmaAllocation m_MemoryAllocation;
 	
 			uint32_t m_Size = 0;
 			bool m_IsFreed = false;

@@ -27,71 +27,37 @@ namespace Rose
 
 	void IndexBuffer::Bind()
 	{
-		const VkDevice& logicalDeivce = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
-		vkBindBufferMemory(logicalDeivce, m_BufferID, m_DeviceMemory, 0);
+
+		vmaBindBufferMemory(VKMemAllocator::GetVMAAllocator(), m_MemoryAllocation, m_BufferID);
 	}
 
 	void IndexBuffer::SetData(void* data, uint32_t size)
 	{
 		m_Size = size;
 
-		const VkDevice& logicalDeivce = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
-
-		void* temp;
-		vkMapMemory(logicalDeivce, m_DeviceMemory, 0, m_Size, 0, &temp);
+		void* temp = nullptr;
+		vmaMapMemory(VKMemAllocator::GetVMAAllocator(), m_MemoryAllocation, &temp);
 		memcpy(temp, data, size);
-		vkUnmapMemory(logicalDeivce, m_DeviceMemory);
+		vmaUnmapMemory(VKMemAllocator::GetVMAAllocator(), m_MemoryAllocation);
 	}
 
 	void IndexBuffer::FreeMemory()
 	{
 		m_IsFreed = true;
-		const VkDevice& logicalDeivce = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
-		vkDestroyBuffer(logicalDeivce, m_BufferID, nullptr);
-		vkFreeMemory(logicalDeivce, m_DeviceMemory, nullptr);
+		VKMemAllocator allocator;
+		allocator.Free(m_MemoryAllocation, m_BufferID);
 	}
 
 	void IndexBuffer::RecreateBuffer()
 	{
-
+		m_IsFreed = false;
 		VkBufferCreateInfo bufferInfo{};
 		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
 		bufferInfo.size = m_Size;
 		bufferInfo.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT;
-		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
 
-
-
-		const VkDevice& logicalDeivce = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
-		const VkPhysicalDevice& physicalDevice = Application::Get().GetContext()->GetPhysicalDevice()->GetDevice();
-
-		vkCreateBuffer(logicalDeivce, &bufferInfo, nullptr, &m_BufferID);
-
-		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(logicalDeivce, m_BufferID, &memRequirements);
-
-
-		VkPhysicalDeviceMemoryProperties memProperties;
-		vkGetPhysicalDeviceMemoryProperties(physicalDevice, &memProperties);
-
-		uint32_t memTypeIndex = 0;
-		uint32_t propFilter = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-			if ((memRequirements.memoryTypeBits & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & propFilter) == propFilter)
-			{
-				memTypeIndex = i;
-				break;
-			}
-		}
-
-		VkMemoryAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = memTypeIndex;
-
-		vkAllocateMemory(logicalDeivce, &allocInfo, nullptr, &m_DeviceMemory);
-
-
+		VKMemAllocator allocator;
+		m_MemoryAllocation = allocator.Allocate(bufferInfo, VMA_MEMORY_USAGE_CPU_TO_GPU, &m_BufferID);
 
 	}
 
