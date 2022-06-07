@@ -11,8 +11,8 @@ namespace Rose
 		public :
 			VKMemAllocator() = default;
 
-			void Init();
-			void Shutdown();
+			static void Init();
+			static void Shutdown();
 
 			VmaAllocation Allocate(VkBufferCreateInfo createInfo, VmaMemoryUsage usage, VkBuffer* outBuffer);
 			void Free(VmaAllocation allocation, VkBuffer buffer);
