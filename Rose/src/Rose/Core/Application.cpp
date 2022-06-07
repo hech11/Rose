@@ -10,6 +10,9 @@
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/gtx/transform.hpp"
 
+#include "Rose/Renderer/API/VKMemAllocator.h"
+
+#include <imgui/imgui.h>
 #include <glfw/glfw3.h>
 
 
@@ -17,40 +20,7 @@ namespace Rose
 {
 
 
-	namespace callbacks
-	{
-
-
-		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugMSGRCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
-			const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) 
-		{
-
-			if(messageSeverity == VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-				LOG("validation layer: %s: %s\n", pCallbackData->pMessageIdName, pCallbackData->pMessage);	
-			return VK_FALSE;
-		}
-
-		static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
-			auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-			if (func != nullptr) {
-				return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-			}
-			else {
-				return VK_ERROR_EXTENSION_NOT_PRESENT;
-			}
-		}
-
-		static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
-			auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-			if (func != nullptr) {
-				func(instance, debugMessenger, pAllocator);
-			}
-		}
-	}
-
 	Application* Application::s_INSTANCE = nullptr;
-
-
 
 	
 	Application::Application()
@@ -58,7 +28,7 @@ namespace Rose
 		s_INSTANCE = this;
 
 		
-			
+		m_ImguiLayer = new ImguiLayer;
 			
 		m_VertexData = {
 			{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
@@ -75,6 +45,8 @@ namespace Rose
 		CreateWinGLFWSurface();
 		CreateVulkanInstance();
 
+		VKMemAllocator::Init();
+
 
 		CreateGraphicsPipeline();
 		CreateFramebuffers();
@@ -90,6 +62,7 @@ namespace Rose
 
 	void Application::Run()
 	{
+		m_ImguiLayer->Init();
 
 		UniformBufferData ubo;
 		ubo.ViewProj = glm::perspective(glm::radians(45.0f), 16.0f / 9.0f, 0.1f, 1000.0f) * glm::translate(glm::mat4(1.0f), { 0.5f, 0.0f, -10.0f });
@@ -247,6 +220,10 @@ namespace Rose
 		vkCmdBindDescriptorSets(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Shader->GetPipelineLayout(), 0, 1, &m_Shader->GetDescriptorSet(), 0, nullptr);
 		vkCmdDrawIndexed(m_VKCommandBuffer, m_IndexData.size(), 1, 0, 0, 0);
 
+
+		OnImguiRender();
+		m_ImguiLayer->End();
+
 		vkCmdEndRenderPass(m_VKCommandBuffer);
 		vkEndCommandBuffer(m_VKCommandBuffer);
 
@@ -255,8 +232,9 @@ namespace Rose
 	void Application::DrawOntoScreen()
 	{
 		m_RenderingContext->GetLogicalDevice()->BeginCommand(m_VKCommandBuffer);
-
+		m_ImguiLayer->Begin();
 		RecordCommandBuffer(m_RenderingContext->GetLogicalDevice()->GetImageIndex());
+
 
 		m_RenderingContext->GetLogicalDevice()->FlushOntoScreen(m_VKCommandBuffer);
 
@@ -285,8 +263,17 @@ namespace Rose
 		}
 
 		m_SwapChain->Destroy();
+
+
+		m_ImguiLayer->Shutdown();
+
+		VKMemAllocator::Shutdown();
+
 		m_RenderingContext->GetLogicalDevice()->Shutdown();
 		m_RenderingContext->Shutdown();
+
+
+
 
 		glfwDestroyWindow(m_Window);
 		glfwTerminate();
@@ -294,5 +281,14 @@ namespace Rose
 	}
 
 
+
+	void Application::OnImguiRender()
+	{
+		ImGui::Begin("Test window!");
+		ImGui::Text("This is some text");
+		static float abcTest = 123.0f;
+		ImGui::SliderFloat("Test slider", &abcTest, 0.0f, 200.0f);
+		ImGui::End();
+	}
 
 }

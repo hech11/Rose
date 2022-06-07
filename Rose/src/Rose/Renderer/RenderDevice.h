@@ -58,6 +58,14 @@ namespace Rose
 				return m_ImageIndex;
 			}
 
+			VkQueue GetQueue() const { return m_RenderingQueue; }
+
+
+			// TODO: Put this into swapchain
+			VkSemaphore& GetImageReady() { return m_ImageReadySemaphore; }
+			VkSemaphore& GetRenderFinished() { return m_RenderFinishedSemaphore; }
+			VkFence& GetFramesInFlight() { return m_FramesInFlightFence; }
+
 
 		private :
 			VkDevice m_Device;

@@ -16,6 +16,8 @@
 #include "Rose/Renderer/RendererContext.h"
 #include "Rose/Renderer/SwapChain.h"
 
+#include "Rose/Editor/ImguiLayer.h"
+
 
 namespace Rose
 {
@@ -76,7 +78,11 @@ namespace Rose
 			std::shared_ptr<SwapChain>& GetSwapChain() { return m_SwapChain; }
 
 			const std::shared_ptr<RendererContext>& GetContext() const { return m_RenderingContext; }
-			
+
+			std::shared_ptr<Shader>& GetShader() { return m_Shader; }
+			VkCommandBuffer& GetCommandBuffer() { return m_VKCommandBuffer; }
+
+			std::vector<VkFramebuffer>& GetFramebuffers() { return m_Framebuffers; }
 
 		public :
 
@@ -108,9 +114,11 @@ namespace Rose
 
 			void CleanUp();
 
+			void OnImguiRender();
 
 		private :
 			GLFWwindow* m_Window = nullptr;
+			ImguiLayer* m_ImguiLayer;
 
 			std::shared_ptr<RendererContext> m_RenderingContext;
 			std::shared_ptr<SwapChain> m_SwapChain;

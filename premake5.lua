@@ -55,6 +55,8 @@ group "Core"
 			"%{prj.name}/vendor/imgui/*.cpp",
 			"%{prj.name}/vendor/imgui/backends/imgui_impl_vulkan.h",
 			"%{prj.name}/vendor/imgui/backends/imgui_impl_vulkan.cpp",
+			"%{prj.name}/vendor/imgui/backends/imgui_impl_glfw.cpp",
+			"%{prj.name}/vendor/imgui/backends/imgui_impl_glfw.cpp",
 			"%{prj.name}/vendor/imgui_internal.h",
 			"%{prj.name}/vendor/imgui/imgui.h",
 			"%{prj.name}/vendor/imgui/imgui.cpp",
@@ -65,7 +67,10 @@ group "Core"
 			--"%{prj.name}/vendor/stb_image/*.cpp",
 			--"%{prj.name}/vendor/stb_image/*.h",
 			"%{prj.name}/vendor/vulkan1.2.182.0/**.hpp",
-			"%{prj.name}/vendor/vulkan1.2.182.0/**.h"
+			"%{prj.name}/vendor/vulkan1.2.182.0/**.h",
+			"%{prj.name}/vendor/imgui/backends/imgui_impl_glfw.cpp",
+			"%{prj.name}/vendor/VulkanMemoryAllocator/vk_mem_alloc.cpp",
+			"%{prj.name}/vendor/VulkanMemoryAllocator/vk_mem_alloc.h",
 		}
 
 		includedirs
