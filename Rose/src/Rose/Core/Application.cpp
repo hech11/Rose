@@ -89,6 +89,37 @@ namespace Rose
 		vkDeviceWaitIdle(m_RenderingContext->GetLogicalDevice()->GetDevice());
 	}
 
+	void Application::OnKeyPressedEvent(int key, int action)
+	{
+
+	}
+
+	void Application::OnKeyReleasedEvent(int key)
+	{
+
+	}
+
+	void Application::OnMouseMovedEvent(int button, int action)
+	{
+
+	}
+
+	void Application::OnMouseButtonClickedEvent(int button, int action)
+	{
+
+	}
+
+	void Application::OnMouseButtonReleasedEvent(int button)
+	{
+
+	}
+
+	void Application::OnMouseScrollWheelUsed(float x, float y)
+	{
+
+	}
+
+
 	const GLFWwindow* Application::GetWindow() const
 	{
 		return m_Window;
@@ -113,6 +144,29 @@ namespace Rose
 			LOG("Failed to create glfw window!\n");
 		}
 		glfwSwapInterval(1);
+		glfwSetWindowUserPointer(m_Window, this);
+
+		glfwSetKeyCallback(m_Window, [](GLFWwindow* window, int key, int scancode, int action, int mod)
+		{
+			if (action == GLFW_PRESS)
+				Application::Get().OnKeyPressedEvent(key, action);
+			else if (action == GLFW_RELEASE)
+				Application::Get().OnKeyReleasedEvent(key);
+		});
+
+		glfwSetMouseButtonCallback(m_Window, [](GLFWwindow* window, int button, int action, int mod)
+		{
+			if (action == GLFW_PRESS)
+				Application::Get().OnMouseButtonClickedEvent(button, action);
+			else if (action == GLFW_RELEASE)
+				Application::Get().OnMouseButtonReleasedEvent(button);
+		});
+
+		glfwSetScrollCallback(m_Window, [](GLFWwindow* window, double x, double y)
+		{
+				Application::Get().OnMouseScrollWheelUsed(x, y);
+
+		});
 
 	}
 

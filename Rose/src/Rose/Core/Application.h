@@ -56,7 +56,11 @@ namespace Rose
 		}
 	};
 
-	
+	enum class EventType
+	{
+		KeyPressed, KeyReleased,
+		MouseMoved, MouseButtonClicked, MouseButtonReleased, MouseScrollWheelUsed
+	};
 
 
 	class Application
@@ -67,6 +71,14 @@ namespace Rose
 
 
 			void Run();
+
+
+			void OnKeyPressedEvent(int key, int action);
+			void OnKeyReleasedEvent(int key);
+			void OnMouseMovedEvent(int button, int action);
+			void OnMouseButtonClickedEvent(int button, int action);
+			void OnMouseButtonReleasedEvent(int button);
+			void OnMouseScrollWheelUsed(float x, float y);
 
 
 			const GLFWwindow* GetWindow() const;
