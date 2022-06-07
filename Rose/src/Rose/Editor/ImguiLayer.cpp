@@ -46,6 +46,34 @@ namespace Rose
 		const auto& window = Application::Get().GetWindow();
 		const auto& context = Application::Get().GetContext();
 
+
+		VkDescriptorPool descriptorPool;
+
+		// Create Descriptor Pool
+		VkDescriptorPoolSize pool_sizes[] =
+		{
+			{ VK_DESCRIPTOR_TYPE_SAMPLER, 100 },
+			{ VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, 100 },
+			{ VK_DESCRIPTOR_TYPE_SAMPLED_IMAGE, 100 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_IMAGE, 100 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_TEXEL_BUFFER, 100 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_TEXEL_BUFFER, 100 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER, 100 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER, 100 },
+			{ VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 100 },
+			{ VK_DESCRIPTOR_TYPE_STORAGE_BUFFER_DYNAMIC, 100 },
+			{ VK_DESCRIPTOR_TYPE_INPUT_ATTACHMENT, 100 }
+		};
+		VkDescriptorPoolCreateInfo pool_info = {};
+		pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+		pool_info.flags = VK_DESCRIPTOR_POOL_CREATE_FREE_DESCRIPTOR_SET_BIT;
+		pool_info.maxSets = 100 * IM_ARRAYSIZE(pool_sizes);
+		pool_info.poolSizeCount = (uint32_t)IM_ARRAYSIZE(pool_sizes);
+		pool_info.pPoolSizes = pool_sizes;
+		vkCreateDescriptorPool(context->GetLogicalDevice()->GetDevice(), &pool_info, nullptr, &descriptorPool);
+
+
+
 		// Setup Platform/Renderer backends
 		ImGui_ImplGlfw_InitForVulkan(window, true);
 		ImGui_ImplVulkan_InitInfo init_info = {};
@@ -54,11 +82,11 @@ namespace Rose
 		init_info.Device = context->GetLogicalDevice()->GetDevice();
 		init_info.QueueFamily = context->GetPhysicalDevice()->GetQueueFamily().Graphics;
 		init_info.Queue = context->GetLogicalDevice()->GetQueue();
-		//init_info.PipelineCache = g_PipelineCache;
-		init_info.DescriptorPool = Application::Get().GetShader()->GetDescriptorPool();
+		init_info.PipelineCache = nullptr;
+		init_info.DescriptorPool = descriptorPool;
 		init_info.Subpass = 0;
 		init_info.MinImageCount = 2;
-		init_info.ImageCount = 2;
+		init_info.ImageCount = Application::Get().GetSwapChain()->GetImageViews().size();
 		init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 		init_info.Allocator = nullptr;
 		init_info.CheckVkResultFn = check_vk_result;

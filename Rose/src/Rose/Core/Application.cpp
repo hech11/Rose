@@ -10,6 +10,8 @@
 #include "glm/ext/matrix_clip_space.hpp"
 #include "glm/gtx/transform.hpp"
 
+#include "Rose/Renderer/API/VKMemAllocator.h"
+
 #include <glfw/glfw3.h>
 
 
@@ -17,40 +19,7 @@ namespace Rose
 {
 
 
-	namespace callbacks
-	{
-
-
-		static VKAPI_ATTR VkBool32 VKAPI_CALL DebugMSGRCallback( VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity, VkDebugUtilsMessageTypeFlagsEXT messageType,
-			const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData, void* pUserData) 
-		{
-
-			if(messageSeverity == VkDebugUtilsMessageSeverityFlagBitsEXT::VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)
-				LOG("validation layer: %s: %s\n", pCallbackData->pMessageIdName, pCallbackData->pMessage);	
-			return VK_FALSE;
-		}
-
-		static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance, const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo, const VkAllocationCallbacks* pAllocator, VkDebugUtilsMessengerEXT* pDebugMessenger) {
-			auto func = (PFN_vkCreateDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkCreateDebugUtilsMessengerEXT");
-			if (func != nullptr) {
-				return func(instance, pCreateInfo, pAllocator, pDebugMessenger);
-			}
-			else {
-				return VK_ERROR_EXTENSION_NOT_PRESENT;
-			}
-		}
-
-		static void DestroyDebugUtilsMessengerEXT(VkInstance instance, VkDebugUtilsMessengerEXT debugMessenger, const VkAllocationCallbacks* pAllocator) {
-			auto func = (PFN_vkDestroyDebugUtilsMessengerEXT)vkGetInstanceProcAddr(instance, "vkDestroyDebugUtilsMessengerEXT");
-			if (func != nullptr) {
-				func(instance, debugMessenger, pAllocator);
-			}
-		}
-	}
-
 	Application* Application::s_INSTANCE = nullptr;
-
-
 
 	
 	Application::Application()
@@ -74,6 +43,8 @@ namespace Rose
 		MakeWindow();
 		CreateWinGLFWSurface();
 		CreateVulkanInstance();
+
+		VKMemAllocator::Init();
 
 
 		CreateGraphicsPipeline();
@@ -290,6 +261,8 @@ namespace Rose
 		m_SwapChain->Destroy();
 		m_ImguiLayer->Shutdown();
 
+
+		VKMemAllocator::Shutdown();
 
 		m_RenderingContext->GetLogicalDevice()->Shutdown();
 		m_RenderingContext->Shutdown();

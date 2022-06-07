@@ -98,7 +98,6 @@ namespace Rose
 			vkDestroyImageView(m_LogicalDevice->GetDevice(), view, nullptr);
 		}
 
-
 		vkDestroySwapchainKHR(m_LogicalDevice->GetDevice(), m_SwapChain, nullptr);
 		vkDestroySurfaceKHR(m_VKInstance, m_WinSurface, nullptr);
 	}
