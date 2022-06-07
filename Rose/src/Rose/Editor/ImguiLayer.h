@@ -1,7 +1,6 @@
 #pragma once
 
 
-struct ImGui_ImplVulkanH_Window;
 namespace Rose
 {
 
@@ -14,6 +13,7 @@ namespace Rose
 
 			void Begin();
 			void End();
+		
 
 	};
 

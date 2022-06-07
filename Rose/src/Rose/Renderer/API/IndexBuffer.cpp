@@ -28,7 +28,7 @@ namespace Rose
 	void IndexBuffer::Bind()
 	{
 
-		vmaBindBufferMemory(VKMemAllocator::GetVMAAllocator(), m_MemoryAllocation, m_BufferID);
+		//vmaBindBufferMemory(VKMemAllocator::GetVMAAllocator(), m_MemoryAllocation, m_BufferID);
 	}
 
 	void IndexBuffer::SetData(void* data, uint32_t size)

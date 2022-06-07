@@ -9,6 +9,8 @@
 namespace Rose
 {
 
+	static VkDescriptorPool descriptorPool;
+
 	static void check_vk_result(VkResult err)
 	{
 		if (err == 0)
@@ -18,6 +20,8 @@ namespace Rose
 			abort();
 	}
 
+
+	//TODO: Resizable swapchain!
 	void ImguiLayer::Init()
 	{
 		// Setup Dear ImGui context
@@ -27,7 +31,7 @@ namespace Rose
 		io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
 		//io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
-		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+//		io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
 		//io.ConfigViewportsNoAutoMerge = true;
 		//io.ConfigViewportsNoTaskBarIcon = true;
 
@@ -47,7 +51,6 @@ namespace Rose
 		const auto& context = Application::Get().GetContext();
 
 
-		VkDescriptorPool descriptorPool;
 
 		// Create Descriptor Pool
 		VkDescriptorPoolSize pool_sizes[] =
@@ -126,6 +129,9 @@ namespace Rose
 		ImGui_ImplVulkan_Shutdown();
 		ImGui_ImplGlfw_Shutdown();
 		ImGui::DestroyContext();
+
+		vkDestroyDescriptorPool(Application::Get().GetContext()->GetLogicalDevice()->GetDevice(), descriptorPool, nullptr);
+
 	}
 
 	void ImguiLayer::Begin()
@@ -142,20 +148,58 @@ namespace Rose
 		ImGui::Render();
 		ImDrawData* main_draw_data = ImGui::GetDrawData();
 		const bool main_is_minimized = (main_draw_data->DisplaySize.x <= 0.0f || main_draw_data->DisplaySize.y <= 0.0f);
+		const auto& window = Application::Get().GetWindow();
+		const auto& context = Application::Get().GetContext();
+		const auto& device = context->GetLogicalDevice()->GetDevice();
 		if (!main_is_minimized)
 		{
+
+// 			{
+// 				//vkResetCommandPool(device, context->GetLogicalDevice()->GetCommandPool(), 0);
+// 				VkCommandBufferBeginInfo info = {};
+// 				info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+// 				info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+// 				vkBeginCommandBuffer(Application::Get().GetCommandBuffer(), &info);
+// 			}
+
+
+// 			{
+// 				VkClearValue cc;
+// 				cc.color.float32[0] = 0.0f * 1.0f;
+// 				cc.color.float32[1] = 0.0f * 1.0f;
+// 				cc.color.float32[2] = 0.0f * 1.0f;
+// 				cc.color.float32[3] = 1.0f;
+// 
+// 				VkRenderPassBeginInfo info = {};
+// 				info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+// 				info.renderPass = Application::Get().GetShader()->GetRenderPass();
+// 				info.framebuffer = Application::Get().GetFramebuffers()[context->GetLogicalDevice()->GetImageIndex()];
+// 				info.renderArea.extent.width = 1600;
+// 				info.renderArea.extent.height = 900;
+// 				info.clearValueCount = 1;
+// 				info.pClearValues = &cc;
+// 				vkCmdBeginRenderPass(Application::Get().GetCommandBuffer(), &info, VK_SUBPASS_CONTENTS_INLINE);
+// 			}
+
 			ImGui_ImplVulkan_RenderDrawData(main_draw_data, Application::Get().GetCommandBuffer());
+// 
+// 			vkCmdEndRenderPass(Application::Get().GetCommandBuffer());
+// 			vkEndCommandBuffer(Application::Get().GetCommandBuffer());
+// 
+
+			ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+			// Update and Render additional Platform Windows
+			if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+			{
+				ImGui::UpdatePlatformWindows();
+				ImGui::RenderPlatformWindowsDefault();
+			}
+
 		}
 
+	
 
-		ImGuiIO& io = ImGui::GetIO(); (void)io;
-
-		// Update and Render additional Platform Windows
-		if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-		{
-			ImGui::UpdatePlatformWindows();
-			ImGui::RenderPlatformWindowsDefault();
-		}
 	}
 
 }

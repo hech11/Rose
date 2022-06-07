@@ -12,6 +12,7 @@
 
 #include "Rose/Renderer/API/VKMemAllocator.h"
 
+#include <imgui/imgui.h>
 #include <glfw/glfw3.h>
 
 
@@ -219,6 +220,10 @@ namespace Rose
 		vkCmdBindDescriptorSets(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Shader->GetPipelineLayout(), 0, 1, &m_Shader->GetDescriptorSet(), 0, nullptr);
 		vkCmdDrawIndexed(m_VKCommandBuffer, m_IndexData.size(), 1, 0, 0, 0);
 
+
+		OnImguiRender();
+		m_ImguiLayer->End();
+
 		vkCmdEndRenderPass(m_VKCommandBuffer);
 		vkEndCommandBuffer(m_VKCommandBuffer);
 
@@ -227,10 +232,9 @@ namespace Rose
 	void Application::DrawOntoScreen()
 	{
 		m_RenderingContext->GetLogicalDevice()->BeginCommand(m_VKCommandBuffer);
+		m_ImguiLayer->Begin();
 		RecordCommandBuffer(m_RenderingContext->GetLogicalDevice()->GetImageIndex());
 
-		m_ImguiLayer->Begin();
-		m_ImguiLayer->End();
 
 		m_RenderingContext->GetLogicalDevice()->FlushOntoScreen(m_VKCommandBuffer);
 
@@ -259,8 +263,9 @@ namespace Rose
 		}
 
 		m_SwapChain->Destroy();
-		m_ImguiLayer->Shutdown();
 
+
+		m_ImguiLayer->Shutdown();
 
 		VKMemAllocator::Shutdown();
 
@@ -276,5 +281,14 @@ namespace Rose
 	}
 
 
+
+	void Application::OnImguiRender()
+	{
+		ImGui::Begin("Test window!");
+		ImGui::Text("This is some text");
+		static float abcTest = 123.0f;
+		ImGui::SliderFloat("Test slider", &abcTest, 0.0f, 200.0f);
+		ImGui::End();
+	}
 
 }

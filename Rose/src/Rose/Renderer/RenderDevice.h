@@ -61,6 +61,12 @@ namespace Rose
 			VkQueue GetQueue() const { return m_RenderingQueue; }
 
 
+			// TODO: Put this into swapchain
+			VkSemaphore& GetImageReady() { return m_ImageReadySemaphore; }
+			VkSemaphore& GetRenderFinished() { return m_RenderFinishedSemaphore; }
+			VkFence& GetFramesInFlight() { return m_FramesInFlightFence; }
+
+
 		private :
 			VkDevice m_Device;
 			std::shared_ptr<PhysicalRenderingDevice> m_PhysicalDevice;

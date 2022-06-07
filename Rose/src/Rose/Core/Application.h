@@ -82,6 +82,8 @@ namespace Rose
 			std::shared_ptr<Shader>& GetShader() { return m_Shader; }
 			VkCommandBuffer& GetCommandBuffer() { return m_VKCommandBuffer; }
 
+			std::vector<VkFramebuffer>& GetFramebuffers() { return m_Framebuffers; }
+
 		public :
 
 			static Application& Get() {
@@ -112,6 +114,7 @@ namespace Rose
 
 			void CleanUp();
 
+			void OnImguiRender();
 
 		private :
 			GLFWwindow* m_Window = nullptr;

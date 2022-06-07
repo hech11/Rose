@@ -28,7 +28,7 @@ namespace Rose
 
 	void VertexBuffer::Bind()
 	{
-		vmaBindBufferMemory(VKMemAllocator::GetVMAAllocator(), m_MemoryAllocation, m_BufferID);
+		//vmaBindBufferMemory(VKMemAllocator::GetVMAAllocator(), m_MemoryAllocation, m_BufferID);
 	}
 
 	void VertexBuffer::SetData(void* data, uint32_t size)
