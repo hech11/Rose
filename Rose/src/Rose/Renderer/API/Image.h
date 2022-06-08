@@ -14,6 +14,12 @@ namespace Rose
 			Image(int width, int height);
 			~Image();
 
+			const VkImage& GetImageBuffer() const { return m_BufferID; }
+			VkImage& GetImageBuffer() { return m_BufferID; }
+
+			void TransitionLayout(VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+			void CopyBufferToImage(VkBuffer srcBuffer, int width, int height);
+
 
 			void Destroy();
 
