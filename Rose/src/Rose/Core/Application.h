@@ -18,6 +18,8 @@
 
 #include "Rose/Editor/ImguiLayer.h"
 
+#include "Rose/Renderer/PerspectiveCamera.h"
+
 
 namespace Rose
 {
@@ -56,7 +58,11 @@ namespace Rose
 		}
 	};
 
-	
+	enum class EventType
+	{
+		KeyPressed, KeyReleased,
+		MouseMoved, MouseButtonClicked, MouseButtonReleased, MouseScrollWheelUsed
+	};
 
 
 	class Application
@@ -67,6 +73,14 @@ namespace Rose
 
 
 			void Run();
+
+
+			void OnKeyPressedEvent(int key, int action);
+			void OnKeyReleasedEvent(int key);
+			void OnMouseMovedEvent(int button, int action);
+			void OnMouseButtonClickedEvent(int button, int action);
+			void OnMouseButtonReleasedEvent(int button);
+			void OnMouseScrollWheelUsed(float x, float y);
 
 
 			const GLFWwindow* GetWindow() const;
@@ -129,6 +143,8 @@ namespace Rose
 
 			std::shared_ptr<Rose::VertexBuffer> m_VBO;
 			std::shared_ptr<Rose::IndexBuffer> m_IBO;
+
+			std::shared_ptr<Rose::PerspectiveCameraController> m_Camera;
 
 
 			std::vector<VkFramebuffer> m_Framebuffers;
