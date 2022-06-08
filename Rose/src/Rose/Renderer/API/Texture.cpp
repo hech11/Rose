@@ -6,6 +6,7 @@
 
 #include "Rose/Core/Application.h"
 
+
 namespace Rose
 {
 
@@ -14,7 +15,8 @@ namespace Rose
 	Texture2D::Texture2D(const std::string& filepath)
 	{
 
-		
+		stbi_set_flip_vertically_on_load(1);
+		m_IsFreed = false;
 		uint8_t* textureBuffer = stbi_load(filepath.c_str(), &m_Width, &m_Height, &m_BPP, 4);
 		if (!textureBuffer)
 		{
@@ -34,6 +36,12 @@ namespace Rose
 		VmaAllocation tempAllocation =  allocator.AllocateBuffer(bufferInfo, VMA_MEMORY_USAGE_CPU_TO_GPU, &tempBuffer);
 
 
+		void* temp;
+		allocator.Map(tempAllocation, &temp);
+		memcpy(temp, textureBuffer, size);
+		allocator.UnMap(tempAllocation);
+
+
 		m_Image = std::make_shared<Image>(m_Width, m_Height);
 
 		m_Image->TransitionLayout(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
@@ -45,13 +53,23 @@ namespace Rose
 
 
 		m_Image->CreateImageViews(VK_FORMAT_R8G8B8A8_SRGB);
-
+		CreateSampler();
 
 
 	}
 
 	Texture2D::~Texture2D()
 	{
+		if (!m_IsFreed)
+		{
+			Destroy();
+		}
+		
+	}
+
+	void Texture2D::Destroy()
+	{
+		m_IsFreed = true;
 		auto& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 
 		vkDestroySampler(device, m_Sampler, nullptr);
@@ -76,9 +94,9 @@ namespace Rose
 		createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-		createInfo.anisotropyEnable = VK_FALSE;
-		createInfo.maxAnisotropy = 1.0f;
-		//createInfo.maxAnisotropy = deviceProps.limits.maxSamplerAnisotropy;
+		createInfo.anisotropyEnable = VK_TRUE;
+		//createInfo.maxAnisotropy = 1.0f;
+		createInfo.maxAnisotropy = deviceProps.limits.maxSamplerAnisotropy;
 
 		createInfo.unnormalizedCoordinates = VK_FALSE;
 		createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
@@ -89,7 +107,7 @@ namespace Rose
 		createInfo.minLod = 0.0f;
 		createInfo.maxLod = 0.0f;
 
-		vkCreateSampler(device, &createInfo, nullptr, &m_Sampler);
+		VkResult result = vkCreateSampler(device, &createInfo, nullptr, &m_Sampler);
 
 
 	}

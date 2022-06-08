@@ -29,9 +29,8 @@ namespace Rose
 
 
 		VKMemAllocator allocator;
-		allocator.AllocateImage(imageInfo, VMA_MEMORY_USAGE_CPU_TO_GPU, &m_BufferID);
+		m_MemoryAllocation = allocator.AllocateImage(imageInfo, VMA_MEMORY_USAGE_GPU_ONLY, &m_BufferID);
 
-		vmaBindImageMemory(allocator.GetVMAAllocator(), m_MemoryAllocation, m_BufferID);
 	}
 
 	Image::~Image()
@@ -43,7 +42,22 @@ namespace Rose
 
 	void Image::TransitionLayout(VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
 	{
-		// TODO: Create Command buffers??
+		
+		auto& device = Application::Get().GetContext()->GetLogicalDevice();
+		VkCommandBufferAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandPool = device->GetCommandPool();
+		allocInfo.commandBufferCount = 1;
+
+		VkCommandBuffer commandBuffer;
+		vkAllocateCommandBuffers(device->GetDevice(), &allocInfo, &commandBuffer);
+
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		vkBeginCommandBuffer(commandBuffer, &beginInfo);
 
 
 		VkImageMemoryBarrier barrier{};
@@ -58,6 +72,7 @@ namespace Rose
 		barrier.subresourceRange.levelCount = 1;
 		barrier.subresourceRange.baseArrayLayer = 0;
 		barrier.subresourceRange.layerCount = 1;
+
 
 		VkPipelineStageFlags sourceStage = 0;
 		VkPipelineStageFlags destinationStage = 0;
@@ -76,18 +91,47 @@ namespace Rose
 			sourceStage = VK_PIPELINE_STAGE_TRANSFER_BIT;
 			destinationStage = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 		}
+		else {
+			ASSERT();
+		}
 
-		VkCommandBuffer temp = nullptr;
-		vkCmdPipelineBarrier(temp, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
+		vkCmdPipelineBarrier(commandBuffer, sourceStage, destinationStage, 0, 0, nullptr, 0, nullptr, 1, &barrier);
 
-		// end command buffer here
+
+		vkEndCommandBuffer(commandBuffer);
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffer;
+
+		vkQueueSubmit(device->GetQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+		vkQueueWaitIdle(device->GetQueue());
+
+		vkFreeCommandBuffers(device->GetDevice(), device->GetCommandPool(), 1, &commandBuffer);
+
 
 	}
 
 	void Image::CopyBufferToImage(VkBuffer srcBuffer, int width, int height)
 	{
 
-		// TODO: Create Command buffers??
+		auto& device = Application::Get().GetContext()->GetLogicalDevice();
+		VkCommandBufferAllocateInfo allocInfo{};
+		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+		allocInfo.commandPool = device->GetCommandPool();
+		allocInfo.commandBufferCount = 1;
+
+		VkCommandBuffer commandBuffer;
+		vkAllocateCommandBuffers(device->GetDevice(), &allocInfo, &commandBuffer);
+
+		VkCommandBufferBeginInfo beginInfo{};
+		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+		beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+
+		vkBeginCommandBuffer(commandBuffer, &beginInfo);
+
 
 		VkBufferImageCopy region{};
 		region.bufferOffset = 0;
@@ -100,19 +144,24 @@ namespace Rose
 		region.imageSubresource.layerCount = 1;
 
 		region.imageOffset = { 0, 0, 0 };
-		region.imageExtent = {
-			width,
-			height,
-			1
-		};
+		region.imageExtent = { (uint32_t)width, (uint32_t)height, 1};
 
 
 
-		VkCommandBuffer temp;
-		vkCmdCopyBufferToImage(temp, srcBuffer, m_BufferID, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+		vkCmdCopyBufferToImage(commandBuffer, srcBuffer, m_BufferID, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
 
-		// end command buffer here
+		vkEndCommandBuffer(commandBuffer);
+
+		VkSubmitInfo submitInfo{};
+		submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+		submitInfo.commandBufferCount = 1;
+		submitInfo.pCommandBuffers = &commandBuffer;
+
+		vkQueueSubmit(device->GetQueue(), 1, &submitInfo, VK_NULL_HANDLE);
+		vkQueueWaitIdle(device->GetQueue());
+
+		vkFreeCommandBuffers(device->GetDevice(), device->GetCommandPool(), 1, &commandBuffer);
 
 	}
 
@@ -125,8 +174,8 @@ namespace Rose
 			ASSERT();
 		}
 
-		m_ImageViews.resize(amount);
-		for (int i = 0; i < m_ImageViews.size(); i++)
+
+		for (int i = 0; i < amount; i++)
 		{
 
 			VkImageView imageView;
@@ -144,7 +193,7 @@ namespace Rose
 
 			vkCreateImageView(Application::Get().GetContext()->GetLogicalDevice()->GetDevice(), &viewInfo, nullptr, &imageView);
 
-			m_ImageViews.emplace_back(imageView);
+			m_ImageViews.push_back(imageView);
 		}
 
 	}

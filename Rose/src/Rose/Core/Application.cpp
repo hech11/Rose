@@ -31,10 +31,10 @@ namespace Rose
 		m_ImguiLayer = new ImguiLayer;
 			
 		m_VertexData = {
-			{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}},
-			{{0.5f,  -0.5f}, {0.0f, 1.0f, 0.0f}},
-			{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}},
-			{{ -0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}}
+			{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+			{{0.5f,  -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+			{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+			{{ -0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
 		};
 
 		m_IndexData =
@@ -47,6 +47,7 @@ namespace Rose
 
 		VKMemAllocator::Init();
 
+		m_Texture = std::make_shared<Rose::Texture2D>("assets/textures/test.png");
 
 		CreateGraphicsPipeline();
 		CreateFramebuffers();
@@ -247,12 +248,14 @@ namespace Rose
 		CreateVertexBuffer();
 		CreateIndexBuffer();
 
+
 		VkCommandBufferAllocateInfo allocInfo{};
 		allocInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
 		allocInfo.commandPool = m_RenderingContext->GetLogicalDevice()->GetCommandPool();
 		allocInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
 		allocInfo.commandBufferCount = 1;
 		vkAllocateCommandBuffers(m_RenderingContext->GetLogicalDevice()->GetDevice(), &allocInfo, &m_VKCommandBuffer);
+
 
 
 	}
@@ -272,7 +275,7 @@ namespace Rose
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = m_SwapChain->GetExtent2D();
 
-		VkClearValue clearColor = { {{0.1f, 0.1f, 0.1f, 1.0f}} };
+		VkClearValue clearColor = { {{0.5f, 0.1f, 0.1f, 1.0f}} };
 		renderPassInfo.clearValueCount = 1;
 		renderPassInfo.pClearValues = &clearColor;
 
@@ -336,6 +339,7 @@ namespace Rose
 
 
 		m_ImguiLayer->Shutdown();
+		m_Texture->Destroy();
 
 		VKMemAllocator::Shutdown();
 

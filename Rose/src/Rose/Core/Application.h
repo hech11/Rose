@@ -15,6 +15,7 @@
 #include "Rose/Renderer/API/IndexBuffer.h"
 #include "Rose/Renderer/RendererContext.h"
 #include "Rose/Renderer/SwapChain.h"
+#include "Rose/Renderer/API/Texture.h"
 
 #include "Rose/Editor/ImguiLayer.h"
 
@@ -27,6 +28,7 @@ namespace Rose
 	{
 		glm::vec2 Position;
 		glm::vec3 Color;
+		glm::vec2 TexCoord;
 
 		static VkVertexInputBindingDescription GetBindingDescription() {
 
@@ -38,9 +40,9 @@ namespace Rose
 			return result;
 		}
 
-		static std::array<VkVertexInputAttributeDescription, 2> GetAttributeDescription()
+		static std::array<VkVertexInputAttributeDescription, 3> GetAttributeDescription()
 		{
-			std::array<VkVertexInputAttributeDescription, 2> result{};
+			std::array<VkVertexInputAttributeDescription, 3> result{};
 
 			result[0].binding = 0;
 			result[0].location = 0;
@@ -52,6 +54,11 @@ namespace Rose
 			result[1].location = 1;
 			result[1].format = VK_FORMAT_R32G32B32_SFLOAT;
 			result[1].offset = offsetof(VertexData, Color);
+
+			result[2].binding = 0;
+			result[2].location = 2;
+			result[2].format = VK_FORMAT_R32G32_SFLOAT;
+			result[2].offset = offsetof(VertexData, TexCoord);
 
 			return result;
 
@@ -94,6 +101,8 @@ namespace Rose
 			const std::shared_ptr<RendererContext>& GetContext() const { return m_RenderingContext; }
 
 			std::shared_ptr<Shader>& GetShader() { return m_Shader; }
+			std::shared_ptr<Texture2D>& GetTexture() { return m_Texture; }
+
 			VkCommandBuffer& GetCommandBuffer() { return m_VKCommandBuffer; }
 
 			std::vector<VkFramebuffer>& GetFramebuffers() { return m_Framebuffers; }
@@ -143,6 +152,8 @@ namespace Rose
 
 			std::shared_ptr<Rose::VertexBuffer> m_VBO;
 			std::shared_ptr<Rose::IndexBuffer> m_IBO;
+
+			std::shared_ptr<Rose::Texture2D> m_Texture;
 
 			std::shared_ptr<Rose::PerspectiveCameraController> m_Camera;
 

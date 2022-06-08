@@ -68,6 +68,17 @@ namespace Rose
 
 	}
 
+
+	void VKMemAllocator::Map(VmaAllocation allocation, void** data)
+	{
+		vmaMapMemory(s_Allocator, allocation, &(*data));
+	}
+
+	void VKMemAllocator::UnMap(VmaAllocation allocation)
+	{
+		vmaUnmapMemory(s_Allocator, allocation);
+	}
+
 	void VKMemAllocator::Free(VmaAllocation allocation, VkBuffer buffer)
 	{
 		vmaDestroyBuffer(s_Allocator, buffer, allocation);

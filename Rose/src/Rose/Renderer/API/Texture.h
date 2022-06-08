@@ -17,6 +17,11 @@ namespace Rose
 			Texture2D(const std::string& filepath);
 			~Texture2D();
 
+			const VkImageView& GetImageView() const { return m_Image->GetImageViews()[0]; }
+			const VkSampler& GetSampler() const { return  m_Sampler; }
+
+			void Destroy();
+
 		private :
 			void CreateSampler();
 
@@ -26,6 +31,7 @@ namespace Rose
 
 			VkSampler m_Sampler;
 			std::shared_ptr<Image> m_Image;
+			bool m_IsFreed = true;
 
 	};
 
