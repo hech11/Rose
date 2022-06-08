@@ -1,6 +1,9 @@
 #include "Image.h"
 
 
+#include "Rose/Core/Log.h"
+#include "Rose/Core/Application.h"
+
 namespace Rose
 {
 
@@ -113,9 +116,47 @@ namespace Rose
 
 	}
 
+	void Image::CreateImageViews(VkFormat format, uint32_t amount)
+	{
+
+		if (!amount)
+		{
+			LOG("No amount was specified for an image view!\n");
+			ASSERT();
+		}
+
+		m_ImageViews.resize(amount);
+		for (int i = 0; i < m_ImageViews.size(); i++)
+		{
+
+			VkImageView imageView;
+
+			VkImageViewCreateInfo viewInfo{};
+			viewInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+			viewInfo.image = m_BufferID;
+			viewInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+			viewInfo.format = format;
+			viewInfo.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+			viewInfo.subresourceRange.baseMipLevel = 0;
+			viewInfo.subresourceRange.levelCount = 1;
+			viewInfo.subresourceRange.baseArrayLayer = 0;
+			viewInfo.subresourceRange.layerCount = 1;
+
+			vkCreateImageView(Application::Get().GetContext()->GetLogicalDevice()->GetDevice(), &viewInfo, nullptr, &imageView);
+
+			m_ImageViews.emplace_back(imageView);
+		}
+
+	}
+
 	void Image::Destroy()
 	{
 		m_IsFreed = true;
+
+		for (auto& view : m_ImageViews)
+		{
+			vkDestroyImageView(Application::Get().GetContext()->GetLogicalDevice()->GetDevice(), view, nullptr);
+		}
 
 		VKMemAllocator allocator;
 		allocator.Free(m_MemoryAllocation, m_BufferID);

@@ -4,7 +4,8 @@
 #include <memory>
 
 
-class Image;
+#include "Image.h"
+
 namespace Rose
 {
 
@@ -17,8 +18,13 @@ namespace Rose
 			~Texture2D();
 
 		private :
+			void CreateSampler();
+
+		private :
 			int32_t m_Width, m_Height, m_BPP;
 
+
+			VkSampler m_Sampler;
 			std::shared_ptr<Image> m_Image;
 
 	};

@@ -3,9 +3,8 @@
 
 #include "Rose/Core/Log.h"
 #include "stb_image/stb_image.h"
-#include "Image.h"
 
-
+#include "Rose/Core/Application.h"
 
 namespace Rose
 {
@@ -43,11 +42,56 @@ namespace Rose
 
 		allocator.Free(tempAllocation, tempBuffer);
 		stbi_image_free(textureBuffer);
+
+
+		m_Image->CreateImageViews(VK_FORMAT_R8G8B8A8_SRGB);
+
+
+
 	}
 
 	Texture2D::~Texture2D()
 	{
+		auto& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
+
+		vkDestroySampler(device, m_Sampler, nullptr);
 		m_Image->Destroy();
+	}
+
+	void Texture2D::CreateSampler()
+	{
+
+		
+		auto& physicalDevice = Application::Get().GetContext()->GetPhysicalDevice()->GetDevice();
+		auto& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
+
+		VkPhysicalDeviceProperties deviceProps{};
+		vkGetPhysicalDeviceProperties(physicalDevice, &deviceProps);
+
+		//TODO: Make these properties dynamic
+		VkSamplerCreateInfo createInfo{};
+		createInfo.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+		createInfo.magFilter = VK_FILTER_LINEAR;
+		createInfo.minFilter = VK_FILTER_LINEAR;
+		createInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+		createInfo.anisotropyEnable = VK_FALSE;
+		createInfo.maxAnisotropy = 1.0f;
+		//createInfo.maxAnisotropy = deviceProps.limits.maxSamplerAnisotropy;
+
+		createInfo.unnormalizedCoordinates = VK_FALSE;
+		createInfo.borderColor = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
+		createInfo.compareOp = VK_COMPARE_OP_ALWAYS;
+		createInfo.compareEnable = VK_FALSE;
+		createInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+		createInfo.mipLodBias = 0.0f;
+		createInfo.minLod = 0.0f;
+		createInfo.maxLod = 0.0f;
+
+		vkCreateSampler(device, &createInfo, nullptr, &m_Sampler);
+
+
 	}
 
 }
