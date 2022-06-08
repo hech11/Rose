@@ -356,12 +356,21 @@ namespace Rose
 		uboLayoutBinding.binding = 0;
 		uboLayoutBinding.descriptorCount = 1;
 		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		uboLayoutBinding.pImmutableSamplers = nullptr;
 		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
+		VkDescriptorSetLayoutBinding samplerLayoutBinding{};
+		samplerLayoutBinding.binding = 1;
+		samplerLayoutBinding.descriptorCount = 1;
+		samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		samplerLayoutBinding.pImmutableSamplers = nullptr;
+		samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+		std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-		layoutInfo.bindingCount = 1;
-		layoutInfo.pBindings = &uboLayoutBinding;
+		layoutInfo.bindingCount = bindings.size();
+		layoutInfo.pBindings = bindings.data();
 
 		vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &m_DescriptorSetLayout);
 	}
@@ -427,14 +436,16 @@ namespace Rose
 
 		const auto& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 
-		VkDescriptorPoolSize poolSize{};
-		poolSize.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSize.descriptorCount = 1;
+		std::array<VkDescriptorPoolSize, 2> poolSizes{};
+		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		poolSizes[0].descriptorCount = 1;
+		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		poolSizes[1].descriptorCount = 1;
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
-		poolInfo.poolSizeCount = 1;
-		poolInfo.pPoolSizes = &poolSize;
+		poolInfo.poolSizeCount = poolSizes.size();
+		poolInfo.pPoolSizes = poolSizes.data();
 
 		poolInfo.maxSets = 1;
 
@@ -451,7 +462,7 @@ namespace Rose
 		allocInfo.descriptorPool = m_DescriptorPool;
 		allocInfo.descriptorSetCount = 1;
 		allocInfo.pSetLayouts = layouts.data();
-		vkAllocateDescriptorSets(device, &allocInfo, &m_DescriptorSet);
+		VkResult result = vkAllocateDescriptorSets(device, &allocInfo, &m_DescriptorSet);
 
 
 		VkDescriptorBufferInfo bufferInfo{};
@@ -459,17 +470,35 @@ namespace Rose
 		bufferInfo.offset = 0;
 		bufferInfo.range = sizeof(UniformBufferData);
 
-		VkWriteDescriptorSet descWrite{};
-		descWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descWrite.dstSet = m_DescriptorSet;
-		descWrite.dstBinding = 0;
-		descWrite.dstArrayElement = 0;
-		descWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descWrite.descriptorCount = 1;
+		VkDescriptorImageInfo imageInfo{};
+		
+		imageInfo.imageView = Application::Get().GetTexture()->GetImageView();
+		imageInfo.sampler = Application::Get().GetTexture()->GetSampler();
+		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
-		descWrite.pBufferInfo = &bufferInfo;
 
-		vkUpdateDescriptorSets(device, 1, &descWrite, 0, nullptr);
+
+
+		std::array<VkWriteDescriptorSet, 2> descWrites{};
+
+		descWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descWrites[0].dstSet = m_DescriptorSet;
+		descWrites[0].dstBinding = 0;
+		descWrites[0].dstArrayElement = 0;
+		descWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+		descWrites[0].descriptorCount = 1;
+		descWrites[0].pBufferInfo = &bufferInfo;
+
+		descWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+		descWrites[1].dstSet = m_DescriptorSet;
+		descWrites[1].dstBinding = 1;
+		descWrites[1].dstArrayElement = 0;
+		descWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+		descWrites[1].descriptorCount = 1;
+		descWrites[1].pImageInfo = &imageInfo;
+
+
+		vkUpdateDescriptorSets(device, descWrites.size(), descWrites.data(), 0, nullptr);
 
 	}
 
