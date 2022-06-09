@@ -14,8 +14,14 @@ namespace Rose
 			static void Init();
 			static void Shutdown();
 
-			VmaAllocation Allocate(VkBufferCreateInfo createInfo, VmaMemoryUsage usage, VkBuffer* outBuffer);
+			VmaAllocation AllocateBuffer(VkBufferCreateInfo createInfo, VmaMemoryUsage usage, VkBuffer* outBuffer);
+			VmaAllocation AllocateImage(VkImageCreateInfo createInfo, VmaMemoryUsage usage, VkImage* outImage);
+
+			void Map(VmaAllocation allocation, void** data);
+			void UnMap(VmaAllocation allocation);
+
 			void Free(VmaAllocation allocation, VkBuffer buffer);
+			void Free(VmaAllocation allocation, VkImage image);
 
 
 			static VmaAllocator& GetVMAAllocator();

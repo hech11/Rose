@@ -61,7 +61,7 @@ namespace Rose
 		bufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
 
 		VKMemAllocator allocator;
-		m_MemoryAllocation = allocator.Allocate(bufferInfo, VMA_MEMORY_USAGE_CPU_TO_GPU, &m_BufferID);
+		m_MemoryAllocation = allocator.AllocateBuffer(bufferInfo, VMA_MEMORY_USAGE_CPU_TO_GPU, &m_BufferID);
 	}
 
 }

@@ -30,7 +30,7 @@ namespace Rose
 		vmaDestroyAllocator(s_Allocator);
 	}
 
-	VmaAllocation VKMemAllocator::Allocate(VkBufferCreateInfo createInfo, VmaMemoryUsage usage, VkBuffer* outBuffer)
+	VmaAllocation VKMemAllocator::AllocateBuffer(VkBufferCreateInfo createInfo, VmaMemoryUsage usage, VkBuffer* outBuffer)
 	{
 		if (!outBuffer)
 		{
@@ -49,10 +49,47 @@ namespace Rose
 
 	}
 
+	VmaAllocation VKMemAllocator::AllocateImage(VkImageCreateInfo createInfo, VmaMemoryUsage usage, VkImage* outImage)
+	{
+		if (!outImage)
+		{
+			LOG("Out image is null!\n");
+			ASSERT();
+		}
+
+
+		VmaAllocationCreateInfo allocCreateInfo{};
+		allocCreateInfo.usage = usage;
+
+		VmaAllocation result;
+		vmaCreateImage(s_Allocator, &createInfo, &allocCreateInfo, outImage, &result, nullptr);
+
+		return result;
+
+	}
+
+
+	void VKMemAllocator::Map(VmaAllocation allocation, void** data)
+	{
+		vmaMapMemory(s_Allocator, allocation, &(*data));
+	}
+
+	void VKMemAllocator::UnMap(VmaAllocation allocation)
+	{
+		vmaUnmapMemory(s_Allocator, allocation);
+	}
+
 	void VKMemAllocator::Free(VmaAllocation allocation, VkBuffer buffer)
 	{
 		vmaDestroyBuffer(s_Allocator, buffer, allocation);
 	}
+
+
+	void VKMemAllocator::Free(VmaAllocation allocation, VkImage image)
+	{
+		vmaDestroyImage(s_Allocator, image, allocation);
+	}
+
 
 	VmaAllocator& VKMemAllocator::GetVMAAllocator()
 	{
