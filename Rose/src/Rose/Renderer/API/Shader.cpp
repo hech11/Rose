@@ -38,6 +38,62 @@ namespace Rose
 			}
 		}
 
+		static std::string FromShaderTypeToString(ShaderModuleTypes type)
+		{
+			switch (type)
+			{
+				case Rose::ShaderModuleTypes::Vertex: return "vertex";
+				case Rose::ShaderModuleTypes::Pixel: return "pixel";
+			}
+		}
+
+		
+		static std::string FromShaderMemberTypeToString(ShaderMemberType type)
+		{
+			switch (type)
+			{
+				case Rose::ShaderMemberType::None: return "None?";
+				case Rose::ShaderMemberType::Int8: return "Int8";
+				case Rose::ShaderMemberType::Int16: return "Int16";
+				case Rose::ShaderMemberType::UInt32: return "UInt32";
+				case Rose::ShaderMemberType::Float: return "Float";
+				case Rose::ShaderMemberType::Bool: return "Bool";
+				case Rose::ShaderMemberType::Mat4: return "Mat4";
+				case Rose::ShaderMemberType::SampledImage: return "SampledImage";
+				default: return "Not listed!";
+			}
+		}
+
+		static ShaderMemberType FromSpirVTypeToShaderMemberType(const spirv_cross::SPIRType& type)
+		{
+			switch (type.basetype)
+			{
+				case spirv_cross::SPIRType::BaseType::Char: return ShaderMemberType::Int8;
+				case spirv_cross::SPIRType::BaseType::Short: return ShaderMemberType::Int16;
+				case spirv_cross::SPIRType::BaseType::Int: return ShaderMemberType::Int32;
+				case spirv_cross::SPIRType::BaseType::Float:
+				{
+					if (type.columns == 4)
+						return ShaderMemberType::Mat4;
+
+					return ShaderMemberType::Float;
+				}
+				case spirv_cross::SPIRType::BaseType::SampledImage: return ShaderMemberType::SampledImage;
+			}
+		}
+
+		static uint32_t ShaderTypeToBytes(const ShaderMemberType& type)
+		{
+			switch (type)
+			{
+				case ShaderMemberType::Bool: return 1;
+				case ShaderMemberType::Float: return 4;
+				case ShaderMemberType::Int16: return 2;
+				case ShaderMemberType::Int32: return 4;
+				case ShaderMemberType::Mat4: return 4 * 4 * 4;
+			}
+		}
+
 	}
 
 
@@ -53,7 +109,7 @@ namespace Rose
 			m_ShaderModules[type] = CreateModule(compiledSources);
 		}
 
-		CreateUniformBuffer();
+		CreateUniformBuffers();
 		CreateDiscriptorSetLayout();
 		CreateDescriptorPool();
 		CreateDescriptorSets();
@@ -80,8 +136,13 @@ namespace Rose
 
 
 		const VkDevice& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
-		vkDestroyBuffer(device, m_UniformBuffer, nullptr);
-		vkFreeMemory(device, m_UBDeviceMemory, nullptr);
+
+		for (auto& ubo : m_UniformBuffers)
+		{
+			vkDestroyBuffer(device, ubo.Buffer, nullptr);
+			vkFreeMemory(device, ubo.DeviceMemory, nullptr);
+		}
+
 
 		vkDestroyDescriptorSetLayout(device, m_DescriptorSetLayout, nullptr);
 		vkDestroyDescriptorPool(device, m_DescriptorPool, nullptr);
@@ -159,6 +220,11 @@ namespace Rose
 			}
 
 			m_CompiledShaderSources[type] = std::vector<uint32_t>(results.cbegin(), results.cend());
+		}
+
+		for (auto& [type, data] : m_CompiledShaderSources)
+		{
+			Reflect(type, data, true);
 		}
 
 	}
@@ -375,47 +441,61 @@ namespace Rose
 		vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &m_DescriptorSetLayout);
 	}
 
-	void Shader::CreateUniformBuffer()
+	void Shader::CreateUniformBuffers()
 	{
-
-		VkDeviceSize bufferSize = sizeof(UniformBufferData);
-
-
-		VkBufferCreateInfo bufferInfo{};
-		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = bufferSize;
-		bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		const auto& VKLogicalDevice = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
-
-		vkCreateBuffer(VKLogicalDevice, &bufferInfo, nullptr, &m_UniformBuffer);
-
-		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(VKLogicalDevice, m_UniformBuffer, &memRequirements);
-
-
-		VkPhysicalDeviceMemoryProperties memProperties;
-		vkGetPhysicalDeviceMemoryProperties(Application::Get().GetContext()->GetPhysicalDevice()->GetDevice(), &memProperties);
-
-		uint32_t memTypeIndex = 0;
-		uint32_t propFilter = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-			if ((memRequirements.memoryTypeBits & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & propFilter) == propFilter)
+		for (auto& resources : m_Resources)
+		{
+			int i = 0;
+			for (auto& reflectedUBO : resources.ReflectedUBOs)
 			{
-				memTypeIndex = i;
-				break;
+				VkBuffer buffer;
+				VkDeviceMemory deviceMemory;
+
+
+				VkBufferCreateInfo bufferInfo{};
+				bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+				bufferInfo.size = reflectedUBO.BufferSize;
+				bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+				bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+				const auto& VKLogicalDevice = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
+
+				vkCreateBuffer(VKLogicalDevice, &bufferInfo, nullptr, &buffer);
+
+
+				VkMemoryRequirements memRequirements;
+				vkGetBufferMemoryRequirements(VKLogicalDevice, buffer, &memRequirements);
+
+
+				VkPhysicalDeviceMemoryProperties memProperties;
+				vkGetPhysicalDeviceMemoryProperties(Application::Get().GetContext()->GetPhysicalDevice()->GetDevice(), &memProperties);
+
+				uint32_t memTypeIndex = 0;
+				uint32_t propFilter = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+				for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+					if ((memRequirements.memoryTypeBits & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & propFilter) == propFilter)
+					{
+						memTypeIndex = i;
+						break;
+					}
+				}
+
+				VkMemoryAllocateInfo allocInfo{};
+				allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+				allocInfo.allocationSize = memRequirements.size;
+				allocInfo.memoryTypeIndex = memTypeIndex;
+
+				if (vkAllocateMemory(VKLogicalDevice, &allocInfo, nullptr, &deviceMemory) != VK_SUCCESS)
+					ASSERT();
+
+				vkBindBufferMemory(VKLogicalDevice, buffer, deviceMemory, 0);
+
+				i++;
+
+				m_UniformBuffers.push_back({ buffer, deviceMemory });
 			}
 		}
+		
 
-		VkMemoryAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = memTypeIndex;
-
-		if (vkAllocateMemory(VKLogicalDevice, &allocInfo, nullptr, &m_UBDeviceMemory) != VK_SUCCESS)
-			ASSERT();
-
-		vkBindBufferMemory(VKLogicalDevice, m_UniformBuffer, m_UBDeviceMemory, 0);
 	}
 
 	void Shader::UpdateUniformBuffer(UniformBufferData& ubo)
@@ -500,8 +580,79 @@ namespace Rose
 
 	}
 
-	void Shader::Reflect()
+	void Shader::Reflect(ShaderModuleTypes type, const std::vector<uint32_t>& data, bool logInfo)
 	{
+		spirv_cross::Compiler compiler(data);
+		spirv_cross::ShaderResources resources = compiler.get_shader_resources();
+
+		ShaderResource shaderResource;
+		shaderResource.Name = std::string(m_Name) + "::" + Utils::FromShaderTypeToString(type).c_str();
+		shaderResource.UniformBufferSize = resources.uniform_buffers.size();
+		shaderResource.ImageBufferSize = resources.sampled_images.size();
+
+
+
+		for (auto& resource : resources.uniform_buffers)
+		{
+
+			ShaderUniformBuffer uniform;
+			auto& id = compiler.get_type(resource.type_id);
+			uniform.BufferSize = compiler.get_declared_struct_size(id);
+			uniform.Binding = compiler.get_decoration(resource.id, spv::Decoration::DecorationBinding);
+			uniform.MemberSize = id.member_types.size();
+
+
+			uint32_t offset = 0;
+			for (int i = 0; i < uniform.MemberSize; i++)
+			{
+
+				ShaderMember member;
+				member.Name = compiler.get_member_name(resource.base_type_id, i).c_str();
+				member.Type = Utils::FromSpirVTypeToShaderMemberType(compiler.get_type(id.member_types[i]));
+
+
+				member.Offset = offset;
+
+				member.Size = Utils::ShaderTypeToBytes(member.Type);
+				offset += member.Size;
+
+				uniform.Members.push_back(member);
+
+			}
+
+			shaderResource.ReflectedUBOs.push_back(uniform);
+
+		}
+
+		if (logInfo)
+		{
+
+			LOG("\n\nShader resource: (%s)\n", shaderResource.Name.c_str());
+			LOG("Uniform buffers: (%d)\n", shaderResource.UniformBufferSize);
+			LOG("Image buffers: (%d)\n", shaderResource.ImageBufferSize);
+			LOG("Reflected UBOs: (count: %d)\n", shaderResource.ReflectedUBOs.size());
+			for (auto& ubo : shaderResource.ReflectedUBOs)
+			{
+				LOG("\t--Binding: (%d)\n", ubo.Binding);
+				LOG("\t--Buffer size: (%d)\n", ubo.BufferSize);
+
+
+				LOG("\t--Members: (count %d)\n", ubo.Members.size());
+				for (auto& member : ubo.Members)
+				{
+					LOG("\t\t--Member: %s\n", member.Name.c_str());
+					LOG("\t\t\t--Type: %s\n", Utils::FromShaderMemberTypeToString(member.Type).c_str());
+					LOG("\t\t\t--Size: %d\n", member.Size);
+					LOG("\t\t\t--Offset: %d\n", member.Offset);
+				}
+				LOG("\t---\n",);
+
+			}
+			LOG("---\n", );
+
+		}
+
+		m_Resources.push_back(shaderResource);
 
 	}
 

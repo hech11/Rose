@@ -42,6 +42,8 @@ namespace Rose
 	struct ShaderResource
 	{
 		std::string Name;
+		uint32_t UniformBufferSize;
+		uint32_t ImageBufferSize;
 		std::vector<ShaderUniformBuffer> ReflectedUBOs;
 	};
 
@@ -55,6 +57,12 @@ namespace Rose
 		glm::mat4 Model, ViewProj;
 	};
 
+	struct VKUniformBuffer
+	{
+		VkBuffer Buffer;
+		VkDeviceMemory DeviceMemory;
+	};
+
 	class Shader
 	{
 
@@ -63,7 +71,7 @@ namespace Rose
 			~Shader();
 
 			void DestroyPipeline();
-			void CreateUniformBuffer();
+			void CreateUniformBuffers();
 
 
 			void UpdateUniformBuffer(UniformBufferData& ubo);
@@ -89,6 +97,7 @@ namespace Rose
 			void CreateDescriptorPool();
 			void CreateDescriptorSets();
 
+
 		private :
 			void ParseShaders(const std::string& filepath);
 
@@ -96,7 +105,7 @@ namespace Rose
 			VkShaderModule CreateModule(const std::vector<uint32_t>& sprvCode);
 
 			void CreateShaderStagePipeline();
-			void Reflect();
+			void Reflect(ShaderModuleTypes type, const std::vector<uint32_t>& data, bool logInfo);
 
 		private :
 			std::string m_Filepath;
@@ -106,13 +115,15 @@ namespace Rose
 			std::unordered_map <ShaderModuleTypes, std::vector<uint32_t>> m_CompiledShaderSources;
 			std::unordered_map <ShaderModuleTypes, VkShaderModule> m_ShaderModules;
 
+			std::vector<ShaderResource> m_Resources;
+			std::vector<VKUniformBuffer> m_UniformBuffers;
+
+
 			VkPipeline m_GraphicsPipeline;
 			VkDescriptorSetLayout m_DescriptorSetLayout;
 			VkPipelineLayout m_PipelineLayout;
 			VkRenderPass m_RenderPass;
 
-			VkBuffer m_UniformBuffer;
-			VkDeviceMemory m_UBDeviceMemory;
 
 			VkDescriptorPool m_DescriptorPool;
 			VkDescriptorSet m_DescriptorSet;

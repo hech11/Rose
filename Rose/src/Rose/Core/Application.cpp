@@ -205,7 +205,7 @@ namespace Rose
 
 	void Application::CreateGraphicsPipeline()
 	{
-		m_Shader = std::make_shared<Shader>("assets/shaders/test.shader");
+		m_Shader = std::make_shared<Shader>("assets/shaders/main.shader");
 
 	}
 
