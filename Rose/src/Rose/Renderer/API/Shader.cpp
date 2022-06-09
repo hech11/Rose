@@ -123,8 +123,8 @@ namespace Rose
 			}
 			else
 			{
-				shaderSources[currentShaderType].first = currentShaderType;
-				shaderSources[currentShaderType].second << line << "\n";
+				shaderSources[(int)currentShaderType].first = currentShaderType;
+				shaderSources[(int)currentShaderType].second << line << "\n";
 			}
 		}
 		for (auto& sources : shaderSources)
@@ -366,7 +366,7 @@ namespace Rose
 		samplerLayoutBinding.pImmutableSamplers = nullptr;
 		samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
 
-		std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
+		std::array<VkDescriptorSetLayoutBinding, 1> bindings = { uboLayoutBinding};
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		layoutInfo.bindingCount = bindings.size();
@@ -436,11 +436,9 @@ namespace Rose
 
 		const auto& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 
-		std::array<VkDescriptorPoolSize, 2> poolSizes{};
+		std::array<VkDescriptorPoolSize, 1> poolSizes{};
 		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
 		poolSizes[0].descriptorCount = 1;
-		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = 1;
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -479,7 +477,7 @@ namespace Rose
 
 
 
-		std::array<VkWriteDescriptorSet, 2> descWrites{};
+		std::array<VkWriteDescriptorSet, 1> descWrites{};
 
 		descWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 		descWrites[0].dstSet = m_DescriptorSet;
@@ -489,14 +487,14 @@ namespace Rose
 		descWrites[0].descriptorCount = 1;
 		descWrites[0].pBufferInfo = &bufferInfo;
 
-		descWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descWrites[1].dstSet = m_DescriptorSet;
-		descWrites[1].dstBinding = 1;
-		descWrites[1].dstArrayElement = 0;
-		descWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descWrites[1].descriptorCount = 1;
-		descWrites[1].pImageInfo = &imageInfo;
-
+// 		descWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+// 		descWrites[1].dstSet = m_DescriptorSet;
+// 		descWrites[1].dstBinding = 1;
+// 		descWrites[1].dstArrayElement = 0;
+// 		descWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+// 		descWrites[1].descriptorCount = 1;
+// 		descWrites[1].pImageInfo = &imageInfo;
+// 
 
 		vkUpdateDescriptorSets(device, descWrites.size(), descWrites.data(), 0, nullptr);
 

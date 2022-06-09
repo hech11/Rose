@@ -45,7 +45,7 @@ namespace Rose
 		std::vector<ShaderUniformBuffer> ReflectedUBOs;
 	};
 
-	enum ShaderModuleTypes
+	enum class ShaderModuleTypes
 	{
 		Vertex, Pixel
 	};

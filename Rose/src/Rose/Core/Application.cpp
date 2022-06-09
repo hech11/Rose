@@ -11,7 +11,6 @@
 #include "glm/gtx/transform.hpp"
 
 #include "Rose/Renderer/API/VKMemAllocator.h"
-#include "Rose/Renderer/Model.h"
 
 #include <imgui/imgui.h>
 #include <glfw/glfw3.h>
@@ -28,18 +27,18 @@ namespace Rose
 	Application::Application()
 	{
 		s_INSTANCE = this;
-
-
-		std::shared_ptr<Model> testModel = std::make_shared<Model>("assets/models/cone.obj");
-		
 		m_ImguiLayer = new ImguiLayer;
+
+
+		
 			
-		m_VertexData = {
-			{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-			{{0.5f,  -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-			{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-			{{ -0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-		};
+		m_TestModel = std::make_shared<Model>("assets/models/coneandsphere.obj");
+// 		m_VertexData = {
+// 			{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
+// 			{{0.5f,  -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
+// 			{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
+// 			{{ -0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
+// 		};
 
 		m_IndexData =
 		{
@@ -236,14 +235,33 @@ namespace Rose
 	void Application::CreateVertexBuffer()
 	{
 
-		m_VBO = std::make_shared<Rose::VertexBuffer>(m_VertexData.data(), sizeof(m_VertexData[0]) * m_VertexData.size());
+		for (auto& mesh : m_TestModel->GetMeshes())
+		{
+			auto& verticies = mesh.Triangles;
+			std::vector<Vertex> verts;
+			for (auto triangle : verticies)
+			{
+				verts.push_back(triangle.Verticies[0]);
+				verts.push_back(triangle.Verticies[1]);
+				verts.push_back(triangle.Verticies[2]);
+			}
+
+			float size = sizeof(verts[0].Position) * verts.size();
+			m_VBOs.push_back(std::make_shared<Rose::VertexBuffer>(verts.data(), size));
+		}
 
 	}
 
 	void Application::CreateIndexBuffer()
 	{
 
-		m_IBO = std::make_shared<Rose::IndexBuffer>(m_IndexData.data(), sizeof(m_IndexData[0]) * m_IndexData.size());
+		for (auto& mesh : m_TestModel->GetMeshes())
+		{
+			auto& indicies = mesh.Indicies;
+			m_IBOs.push_back(std::make_shared<Rose::IndexBuffer>(indicies.data(), sizeof(indicies[0]) * indicies.size()));
+		}
+
+		
 	}
 
 	void Application::CreateCommandPoolAndBuffer()
@@ -270,6 +288,7 @@ namespace Rose
 		VkCommandBufferBeginInfo beginInfo{};
 		beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
 
+
 		vkBeginCommandBuffer(m_VKCommandBuffer, &beginInfo);
 
 		VkRenderPassBeginInfo renderPassInfo{};
@@ -284,25 +303,30 @@ namespace Rose
 		renderPassInfo.pClearValues = &clearColor;
 
 		vkCmdBeginRenderPass(m_VKCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
 		vkCmdBindPipeline(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Shader->GetGrahpicsPipeline());
 
-
-		VkBuffer vbos[] = { m_VBO->GetBufferID() };
-		VkDeviceSize offset[] = { 0 };
-
-		vkCmdBindVertexBuffers(m_VKCommandBuffer, 0, 1, vbos, offset);
-		vkCmdBindIndexBuffer(m_VKCommandBuffer, m_IBO->GetBufferID(), 0, VK_INDEX_TYPE_UINT32);
-
-		vkCmdBindDescriptorSets(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Shader->GetPipelineLayout(), 0, 1, &m_Shader->GetDescriptorSet(), 0, nullptr);
-		vkCmdDrawIndexed(m_VKCommandBuffer, m_IndexData.size(), 1, 0, 0, 0);
+		for (int i = 0; i < m_VBOs.size(); i++)
+		{
 
 
+			VkBuffer vbos[] = { m_VBOs[i]->GetBufferID() };
+			VkDeviceSize offset[] = { 0 };
+
+			vkCmdBindVertexBuffers(m_VKCommandBuffer, 0, 1, vbos, offset);
+			vkCmdBindIndexBuffer(m_VKCommandBuffer, m_IBOs[i]->GetBufferID(), 0, VK_INDEX_TYPE_UINT32);
+
+			vkCmdBindDescriptorSets(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Shader->GetPipelineLayout(), 0, 1, &m_Shader->GetDescriptorSet(), 0, nullptr);
+			vkCmdDrawIndexed(m_VKCommandBuffer, m_TestModel->GetMeshes()[i].Indicies.size(), 1, 0, 0, 0);
+
+
+
+		}
 		OnImguiRender();
 		m_ImguiLayer->End();
 
 		vkCmdEndRenderPass(m_VKCommandBuffer);
 		vkEndCommandBuffer(m_VKCommandBuffer);
+
 
 	}
 
@@ -328,8 +352,14 @@ namespace Rose
 	void Application::CleanUp()
 	{
 
-		m_VBO->FreeMemory();
-		m_IBO->FreeMemory();
+		for (auto& vbo : m_VBOs)
+		{
+			vbo->FreeMemory();
+		}
+		for (auto& ibo : m_IBOs)
+		{
+			ibo->FreeMemory();
+		}
 
 
 

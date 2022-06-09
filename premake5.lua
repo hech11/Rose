@@ -205,6 +205,7 @@ project "SandboxApplication"
 			"Rose/src",
 			"Rose/vendor/spdlog/include",
 			"Rose/vendor",
+			"Rose/vendor/assimp/include",
 			"%{IncludeDir.glfw}/include",
 			"%{IncludeDir.imgui}",
 			"%{IncludeDir.glm}",

@@ -16,6 +16,7 @@
 #include "Rose/Renderer/RendererContext.h"
 #include "Rose/Renderer/SwapChain.h"
 #include "Rose/Renderer/API/Texture.h"
+#include "Rose/Renderer/Model.h"
 
 #include "Rose/Editor/ImguiLayer.h"
 
@@ -27,9 +28,7 @@ namespace Rose
 {
 	struct VertexData
 	{
-		glm::vec2 Position;
-		glm::vec3 Color;
-		glm::vec2 TexCoord;
+		glm::vec3 Position;
 
 		static VkVertexInputBindingDescription GetBindingDescription() {
 
@@ -41,25 +40,25 @@ namespace Rose
 			return result;
 		}
 
-		static std::array<VkVertexInputAttributeDescription, 3> GetAttributeDescription()
+		static std::array<VkVertexInputAttributeDescription, 1> GetAttributeDescription()
 		{
-			std::array<VkVertexInputAttributeDescription, 3> result{};
+			std::array<VkVertexInputAttributeDescription, 1> result{};
 
 			result[0].binding = 0;
 			result[0].location = 0;
-			result[0].format = VK_FORMAT_R32G32_SFLOAT;
+			result[0].format = VK_FORMAT_R32G32B32_SFLOAT;
 			result[0].offset = offsetof(VertexData, Position);
 
-
-			result[1].binding = 0;
-			result[1].location = 1;
-			result[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-			result[1].offset = offsetof(VertexData, Color);
-
-			result[2].binding = 0;
-			result[2].location = 2;
-			result[2].format = VK_FORMAT_R32G32_SFLOAT;
-			result[2].offset = offsetof(VertexData, TexCoord);
+// 
+// 			result[1].binding = 0;
+// 			result[1].location = 1;
+// 			result[1].format = VK_FORMAT_R32G32B32_SFLOAT;
+// 			result[1].offset = offsetof(VertexData, Color);
+// 
+// 			result[2].binding = 0;
+// 			result[2].location = 2;
+// 			result[2].format = VK_FORMAT_R32G32_SFLOAT;
+// 			result[2].offset = offsetof(VertexData, TexCoord);
 
 			return result;
 
@@ -151,8 +150,8 @@ namespace Rose
 			std::vector<Rose::VertexData> m_VertexData;
 			std::vector<uint32_t> m_IndexData;
 
-			std::shared_ptr<Rose::VertexBuffer> m_VBO;
-			std::shared_ptr<Rose::IndexBuffer> m_IBO;
+			std::vector<std::shared_ptr<Rose::VertexBuffer>> m_VBOs;
+			std::vector<std::shared_ptr<Rose::IndexBuffer>> m_IBOs;
 
 			std::shared_ptr<Rose::Texture2D> m_Texture;
 
@@ -164,6 +163,7 @@ namespace Rose
 			VkCommandBuffer m_VKCommandBuffer;
 
 			std::shared_ptr<Shader> m_Shader;
+			std::shared_ptr<Model> m_TestModel;
 
 
 			static Application* s_INSTANCE;
