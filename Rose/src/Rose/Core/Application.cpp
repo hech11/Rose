@@ -11,9 +11,11 @@
 #include "glm/gtx/transform.hpp"
 
 #include "Rose/Renderer/API/VKMemAllocator.h"
+#include "Rose/Renderer/Model.h"
 
 #include <imgui/imgui.h>
 #include <glfw/glfw3.h>
+
 
 
 namespace Rose
@@ -27,6 +29,8 @@ namespace Rose
 	{
 		s_INSTANCE = this;
 
+
+		std::shared_ptr<Model> testModel = std::make_shared<Model>("assets/models/cone.obj");
 		
 		m_ImguiLayer = new ImguiLayer;
 			

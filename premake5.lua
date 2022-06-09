@@ -53,6 +53,11 @@ group "Core"
 			"%{prj.name}/vendor/glm/glm/**.inl",
 			"%{prj.name}/vendor/imgui/*.h",
 			"%{prj.name}/vendor/imgui/*.cpp",
+			"%{prj.name}/vendor/assimp/**.h",
+			"%{prj.name}/vendor/assimp/*.h",
+			"%{prj.name}/vendor/assimp/*.hpp",
+			"%{prj.name}/vendor/assimp/**.hpp",
+			"%{prj.name}/vendor/imgui/*.cpp",
 			"%{prj.name}/vendor/imgui/backends/imgui_impl_vulkan.h",
 			"%{prj.name}/vendor/imgui/backends/imgui_impl_vulkan.cpp",
 			"%{prj.name}/vendor/imgui/backends/imgui_impl_glfw.cpp",
@@ -64,8 +69,8 @@ group "Core"
 			"%{prj.name}/vendor/imgui/imgui_draw.cpp",
 			"%{prj.name}/vendor/imgui/imgui_tables.cpp",
 			"%{prj.name}/vendor/imgui/imgui_widgets.cpp",
-			--"%{prj.name}/vendor/stb_image/*.cpp",
-			--"%{prj.name}/vendor/stb_image/*.h",
+			"%{prj.name}/vendor/stb_image/*.cpp",
+			"%{prj.name}/vendor/stb_image/*.h",
 			"%{prj.name}/vendor/vulkan1.2.182.0/**.hpp",
 			"%{prj.name}/vendor/vulkan1.2.182.0/**.h",
 			"%{prj.name}/vendor/imgui/backends/imgui_impl_glfw.cpp",
@@ -78,6 +83,7 @@ group "Core"
 			"%{prj.name}/src",
 			"%{prj.name}/vendor",
 			"%{prj.name}/vendor/spdlog/include",
+			"%{prj.name}/vendor/assimp/include",
 			"%{IncludeDir.glfw}/include",
 			"%{IncludeDir.imgui}",
 			"%{IncludeDir.glad}/include",
@@ -116,7 +122,9 @@ group "Core"
 
 			libdirs
 			{
-				"%{prj.name}/vendor/vulkan1.2.182.0/debugLib"
+				"%{prj.name}/vendor/vulkan1.2.182.0/debugLib",
+				"%{prj.name}/vendor/assimp/bin/debug"
+
 			}
 
 
@@ -126,7 +134,8 @@ group "Core"
 				"shaderc_sharedd.lib",
 				"spirv-cross-cored.lib",
 				"spirv-cross-glsld.lib",
-				"vulkan-1.lib"
+				"vulkan-1.lib",
+				"assimp-vc142-mtd.lib"
 			}
 
 
@@ -141,7 +150,9 @@ group "Core"
 
 			libdirs
 			{
-				"%{prj.name}/vendor/vulkan1.2.182.0/lib"
+				"%{prj.name}/vendor/vulkan1.2.182.0/lib",
+				"%{prj.name}/vendor/assimp/bin/release"
+
 			}
 
 
@@ -151,7 +162,8 @@ group "Core"
 				"shaderc_shared.lib",
 				"spirv-cross-core.lib",
 				"spirv-cross-glsl.lib",
-				"vulkan-1.lib"
+				"vulkan-1.lib",
+				"assimp-vc142-mt.lib"
 			}
 
 group ""
@@ -219,7 +231,8 @@ project "SandboxApplication"
 			{
 				'{COPY} "../Rose/vendor/vulkan1.2.182.0/bin/debug/shaderc_sharedd.dll" "%{cfg.targetdir}"',
 				'{COPY} "../Rose/vendor/vulkan1.2.182.0/bin/debug/spirv-cross-c-sharedd.dll" "%{cfg.targetdir}"',
-				'{COPY} "../Rose/vendor/vulkan1.2.182.0/bin/debug/SPIRV-Tools-sharedd.dll" "%{cfg.targetdir}"'
+				'{COPY} "../Rose/vendor/vulkan1.2.182.0/bin/debug/SPIRV-Tools-sharedd.dll" "%{cfg.targetdir}"',
+				'{COPY} "../Rose/vendor/assimp/bin/debug/assimp-vc142-mtd.dll" "%{cfg.targetdir}"'
 			}
 
 		filter "configurations:Release"
@@ -231,7 +244,8 @@ project "SandboxApplication"
 			{
 				'{COPY} "../Rose/vendor/vulkan1.2.182.0/bin/release/shaderc_shared.dll" "%{cfg.targetdir}"',
 				'{COPY} "../Rose/vendor/vulkan1.2.182.0/bin/release/spirv-cross-c-shared.dll" "%{cfg.targetdir}"',
-				'{COPY} "../Rose/vendor/vulkan1.2.182.0/bin/release/SPIRV-Tools-shared.dll" "%{cfg.targetdir}"'
+				'{COPY} "../Rose/vendor/vulkan1.2.182.0/bin/release/SPIRV-Tools-shared.dll" "%{cfg.targetdir}"',
+				'{COPY} "../Rose/vendor/assimp/bin/release/assimp-vc142-mt.dll" "%{cfg.targetdir}"'
 			}
 
 
