@@ -27,7 +27,7 @@ namespace Rose
 
 	struct Mesh
 	{
-		std::vector<Triangle> Triangles;
+		std::vector<Vertex> Verticies;
 		std::vector<uint32_t> Indicies;
 
 	};

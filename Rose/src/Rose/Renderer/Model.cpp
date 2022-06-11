@@ -5,12 +5,14 @@
 
 #include <assimp/Importer.hpp>
 #include <assimp/postprocess.h>
+#include <filesystem>
 
 
 namespace Rose
 {
 
-	Model::Model(const std::string& filepath)
+	Model::Model(const std::string& filepath) 
+		: m_Filepath(filepath)
 	{
 
 		Assimp::Importer importer;
@@ -53,13 +55,6 @@ namespace Rose
 
 		for (uint32_t i = 0; i < mesh->mNumVertices; i++)
 		{
-			if (mult3 == 3)
-			{
-				mult3 = 0;
-				result.Triangles.push_back(triangle);
-			}
-
-
 			Vertex vertex;
 
 			vertex.Position.x = mesh->mVertices[i].x;
@@ -70,36 +65,17 @@ namespace Rose
  			vertex.Normal.y = mesh->mNormals[i].y;
  			vertex.Normal.z = mesh->mNormals[i].z;
  
- 			vertex.TexCoord.x = 0.0f;
- 			vertex.TexCoord.y = 0.0f;
-
-			triangle.Verticies[mult3] = vertex;
-
-			mult3++;
-		}
-
-
-		if (mult3 == 3)
-		{
-			Vertex vertex;
-			int i = mesh->mNumVertices;
-			vertex.Position.x = mesh->mVertices[i].x;
-			vertex.Position.y = mesh->mVertices[i].y;
-			vertex.Position.z = mesh->mVertices[i].z;
-
-			vertex.Normal.x = mesh->mNormals[i].x;
-			vertex.Normal.y = mesh->mNormals[i].y;
-			vertex.Normal.z = mesh->mNormals[i].z;
-
 			if (mesh->mTextureCoords[0])
 			{
 				vertex.TexCoord.x = mesh->mTextureCoords[0][i].x;
 				vertex.TexCoord.y = mesh->mTextureCoords[0][i].y;
 			}
 
-			result.Triangles.push_back(triangle);
-
+			result.Verticies.push_back(vertex);
 		}
+
+
+		
 
 		for (uint32_t i = 0; i < mesh->mNumFaces; i++)
 		{
@@ -110,6 +86,70 @@ namespace Rose
 			}
 		}
 
+		if (mesh->mMaterialIndex >= 0)
+		{
+			Material result;
+			result.Name = "No name";
+
+
+			aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
+			auto diffMaps = LoadTextures(material, aiTextureType_DIFFUSE);
+			result.Uniforms.insert(result.Uniforms.end(), diffMaps.begin(), diffMaps.end());
+
+
+			auto specMaps = LoadTextures(material, aiTextureType_SPECULAR);
+			result.Uniforms.insert(result.Uniforms.end(), specMaps.begin(), specMaps.end());
+
+
+			auto normMaps = LoadTextures(material, aiTextureType_NORMALS);
+			result.Uniforms.insert(result.Uniforms.end(), normMaps.begin(), normMaps.end());
+
+			ShaderAttributeLayout layout =
+			{
+				{"a_Position", 0, ShaderMemberType::Float3},
+				{"a_Normal", 1, ShaderMemberType::Float3},
+				{"a_TexCoord", 2, ShaderMemberType::Float2}
+			};
+
+			result.ShaderData = std::make_shared<Rose::Shader>("assets/shaders/main.shader", layout);
+			result.ShaderData->CreatePipelineAndDescriptorPool(result.Uniforms);
+
+			m_Materials.push_back(result);
+
+		}
+
+		
+
+		return result;
+	}
+
+	std::vector<MaterialUniform> Model::LoadTextures(aiMaterial* mat, aiTextureType type)
+	{
+		std::vector<MaterialUniform> result;
+
+		for (unsigned int i = 0; i < mat->GetTextureCount(type); i++)
+		{
+			MaterialUniform uniform;
+
+			if (type == aiTextureType_DIFFUSE)
+				uniform.TextureType = PBRTextureType::Albedo;
+			else if (type == aiTextureType_SPECULAR)
+				uniform.TextureType = PBRTextureType::Specular;
+			else if (type == aiTextureType_NORMALS)
+				uniform.TextureType = PBRTextureType::Normal;
+
+
+			aiString str;
+			mat->GetTexture(type, i, &str);
+
+
+			std::filesystem::path modelPath = m_Filepath;
+			std::filesystem::path modelParentPath = modelPath.parent_path();
+
+			uniform.Texture = std::make_shared<Texture2D>(modelParentPath.string() + std::string("/") +std::string(str.C_Str()));
+
+			result.push_back(uniform);
+		}
 		return result;
 	}
 

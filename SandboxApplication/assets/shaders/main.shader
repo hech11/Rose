@@ -42,10 +42,10 @@ layout(binding = 1) uniform sampler2D u_Texture;
 
 void main()
 {
-	float ambientStrength = 0.1;
+	float ambientStrength = 0.2;
 	vec3 ambient = ambientStrength * vec3(1.0f, 1.0f, 1.0f);
 
-	vec3 lightPos = { 3.0f, 1.0f, 0.0f };
+	vec3 lightPos = { 3.0f, 20.0f, 0.0f };
 
 	vec3 norm = normalize(v_Normal);
 	vec3 lightDir = normalize(lightPos - v_FragPos);
@@ -55,5 +55,7 @@ void main()
 	vec3 diffuse = vec3(diff, diff, diff);
 
 	vec4 color = texture(u_Texture, v_TexCoord);
-	fragColor = color * vec4(diffuse + ambient, 1.0f);
+	if (color.a < 0.8)
+		discard;
+	fragColor = color;
 }

@@ -62,8 +62,7 @@ namespace Rose
 
 			const std::shared_ptr<RendererContext>& GetContext() const { return m_RenderingContext; }
 
-			std::shared_ptr<Shader>& GetShader() { return m_Shader; }
-			std::shared_ptr<Texture2D>& GetTexture() { return m_Texture; }
+			std::shared_ptr<Model>& GetTestModel() { return m_TestModel; }
 
 			VkCommandBuffer& GetCommandBuffer() { return m_VKCommandBuffer; }
 
@@ -109,12 +108,10 @@ namespace Rose
 			std::shared_ptr<SwapChain> m_SwapChain;
 
 
-			std::vector<uint32_t> m_IndexData;
 
 			std::vector<std::shared_ptr<Rose::VertexBuffer>> m_VBOs;
 			std::vector<std::shared_ptr<Rose::IndexBuffer>> m_IBOs;
 
-			std::shared_ptr<Rose::Texture2D> m_Texture;
 
 			std::shared_ptr<Rose::PerspectiveCameraController> m_Camera;
 
@@ -123,7 +120,6 @@ namespace Rose
 
 			VkCommandBuffer m_VKCommandBuffer;
 
-			std::shared_ptr<Shader> m_Shader;
 			std::shared_ptr<Model> m_TestModel;
 
 

@@ -95,7 +95,7 @@ namespace Rose
 		createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		createInfo.anisotropyEnable = VK_TRUE;
-		//createInfo.maxAnisotropy = 1.0f;
+		createInfo.maxAnisotropy = 1.0f;
 		createInfo.maxAnisotropy = deviceProps.limits.maxSamplerAnisotropy;
 
 		createInfo.unnormalizedCoordinates = VK_FALSE;

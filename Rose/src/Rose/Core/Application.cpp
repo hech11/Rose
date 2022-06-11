@@ -32,19 +32,15 @@ namespace Rose
 
 		
 			
-		m_TestModel = std::make_shared<Model>("assets/models/coneandsphere.obj");
-
-		m_IndexData =
-		{
-			0, 1, 2, 2, 3, 0
-		};
+		
 		MakeWindow();
 		CreateWinGLFWSurface();
 		CreateVulkanInstance();
 
 		VKMemAllocator::Init();
+		m_TestModel = std::make_shared<Model>("assets/models/sponza/sponza.gltf");
+		//m_TestModel = std::make_shared<Model>("assets/models/coneandsphere.obj");
 
-		m_Texture = std::make_shared<Rose::Texture2D>("assets/textures/test.png");
 
 		CreateGraphicsPipeline();
 		CreateFramebuffers();
@@ -58,25 +54,26 @@ namespace Rose
 		CleanUp();
 	}
 
-	static glm::vec3 quadPos = {0.0f, 0.0f, 0.0f};
+	static glm::vec3 quadPos = { 0.0f, 0.0f, 0.0f };
+	static glm::vec3 quadScale = { 0.1f, 0.1f, 0.1f };
 
 	void Application::Run()
 	{
 		m_ImguiLayer->Init();
 
 
-		m_Camera = std::make_shared<Rose::PerspectiveCameraController>(glm::perspective(glm::radians(60.0f), 16.0f / 9.0f, 0.1f, 1000.0f));
+		m_Camera = std::make_shared<Rose::PerspectiveCameraController>(glm::perspective(glm::radians(60.0f), 16.0f / 9.0f, 0.1f, 10000.0f));
 		m_Camera->GetCam().SetPosition({ 0.0f, 0.0f, -10.0f });
 		UniformBufferData ubo;
 		
 
 
+		ubo.Model = glm::mat4(1.0f);
 
 		while (!glfwWindowShouldClose(m_Window))
 		{
 			m_Camera->OnUpdate(0.016f);
 
-			ubo.Model = glm::translate(glm::mat4(1.0f), quadPos);
 			if (useCamera)
 			{
 				ubo.ViewProj = m_Camera->GetCam().GetProjView();
@@ -86,7 +83,11 @@ namespace Rose
 
 
 			glfwPollEvents();
-			m_Shader->UpdateUniformBuffer(&ubo, sizeof(ubo), 0);
+			for (auto& mat : m_TestModel->GetMaterials())
+			{
+				mat.ShaderData->UpdateUniformBuffer(&ubo, sizeof(ubo), 0);
+			}
+
 			DrawOntoScreen();
 
 		}
@@ -199,13 +200,6 @@ namespace Rose
 
 	void Application::CreateGraphicsPipeline()
 	{
-		ShaderAttributeLayout layout =
-		{
-			{"a_Position", 0, ShaderMemberType::Float3},
-			{"a_Normal", 1, ShaderMemberType::Float3},
-			{"a_TexCoord", 2, ShaderMemberType::Float2}
-		};
-		m_Shader = std::make_shared<Shader>("assets/shaders/main.shader", layout);
 
 	}
 
@@ -214,15 +208,16 @@ namespace Rose
 		m_Framebuffers.resize(m_SwapChain->GetImageViews().size());
 
 		for (size_t i = 0; i < m_SwapChain->GetImageViews().size(); i++) {
-			VkImageView attachments[] = {
-				m_SwapChain->GetImageViews()[i]
+			std::array<VkImageView,2> attachments = {
+				m_SwapChain->GetImageViews()[i],
+				m_SwapChain->GetDepthImageView()
 			};
 
 			VkFramebufferCreateInfo framebufferInfo{};
 			framebufferInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-			framebufferInfo.renderPass = m_Shader->GetRenderPass();
-			framebufferInfo.attachmentCount = 1;
-			framebufferInfo.pAttachments = attachments;
+			framebufferInfo.renderPass = m_TestModel->GetMaterials()[0].ShaderData->GetRenderPass();
+			framebufferInfo.attachmentCount = attachments.size();
+			framebufferInfo.pAttachments = attachments.data();
 			framebufferInfo.width = m_SwapChain->GetExtent2D().width;
 			framebufferInfo.height = m_SwapChain->GetExtent2D().height;
 			framebufferInfo.layers = 1;
@@ -237,17 +232,10 @@ namespace Rose
 
 		for (auto& mesh : m_TestModel->GetMeshes())
 		{
-			auto& verticies = mesh.Triangles;
-			std::vector<Vertex> verts;
-			for (auto triangle : verticies)
-			{
-				verts.push_back(triangle.Verticies[0]);
-				verts.push_back(triangle.Verticies[1]);
-				verts.push_back(triangle.Verticies[2]);
-			}
+			auto& verticies = mesh.Verticies;
 
-			float size = sizeof(Vertex) * verts.size();
-			m_VBOs.push_back(std::make_shared<Rose::VertexBuffer>(verts.data(), size));
+			float size = sizeof(Vertex) * verticies.size();
+			m_VBOs.push_back(std::make_shared<Rose::VertexBuffer>(verticies.data(), size));
 		}
 
 	}
@@ -293,17 +281,19 @@ namespace Rose
 
 		VkRenderPassBeginInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-		renderPassInfo.renderPass = m_Shader->GetRenderPass();
+		renderPassInfo.renderPass = m_TestModel->GetMaterials()[0].ShaderData->GetRenderPass();
 		renderPassInfo.framebuffer = m_Framebuffers[imageIndex];
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = m_SwapChain->GetExtent2D();
 
-		VkClearValue clearColor = { {{0.5f, 0.1f, 0.1f, 1.0f}} };
-		renderPassInfo.clearValueCount = 1;
-		renderPassInfo.pClearValues = &clearColor;
+		std::array<VkClearValue, 2> clearValues{};
+		clearValues[0].color = { {0.5f, 0.1f, 0.1f, 1.0f} };
+		clearValues[1].depthStencil = { 1.0f, 0 };
+
+		renderPassInfo.clearValueCount = clearValues.size();
+		renderPassInfo.pClearValues = clearValues.data();
 
 		vkCmdBeginRenderPass(m_VKCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-		vkCmdBindPipeline(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Shader->GetGrahpicsPipeline());
 
 		for (int i = 0; i < m_VBOs.size(); i++)
 		{
@@ -312,10 +302,14 @@ namespace Rose
 			VkBuffer vbos[] = { m_VBOs[i]->GetBufferID() };
 			VkDeviceSize offset[] = { 0 };
 
+			const auto& shader = m_TestModel->GetMaterials()[i].ShaderData;
+
+			vkCmdBindPipeline(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetGrahpicsPipeline());
+
 			vkCmdBindVertexBuffers(m_VKCommandBuffer, 0, 1, vbos, offset);
 			vkCmdBindIndexBuffer(m_VKCommandBuffer, m_IBOs[i]->GetBufferID(), 0, VK_INDEX_TYPE_UINT32);
 
-			vkCmdBindDescriptorSets(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, m_Shader->GetPipelineLayout(), 0, 1, &m_Shader->GetDescriptorSet(), 0, nullptr);
+			vkCmdBindDescriptorSets(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetPipelineLayout(), 0, 1, &shader->GetDescriptorSet(), 0, nullptr);
 			vkCmdDrawIndexed(m_VKCommandBuffer, m_TestModel->GetMeshes()[i].Indicies.size(), 1, 0, 0, 0);
 
 
@@ -363,7 +357,6 @@ namespace Rose
 
 
 
-		m_Shader->DestroyPipeline();
 
 		for (auto fb : m_Framebuffers) {
 			vkDestroyFramebuffer(m_RenderingContext->GetLogicalDevice()->GetDevice(), fb, nullptr);
@@ -373,7 +366,6 @@ namespace Rose
 
 
 		m_ImguiLayer->Shutdown();
-		m_Texture->Destroy();
 
 		VKMemAllocator::Shutdown();
 
@@ -394,7 +386,8 @@ namespace Rose
 	{
 		ImGui::Begin("Test window!");
 		ImGui::Text("This is some text");
-		ImGui::SliderFloat3("quad pos", &quadPos.x, -10.0f, 10.0f);
+		ImGui::SliderFloat3("model pos", &quadPos.x, -10.0f, 10.0f);
+		ImGui::SliderFloat3("model scale", &quadScale.x, -10.0f, 10.0f);
 		ImGui::Checkbox("Use camera", &useCamera);
 		ImGui::End();
 	}

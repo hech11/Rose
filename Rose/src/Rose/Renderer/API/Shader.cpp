@@ -100,20 +100,8 @@ namespace Rose
 
 		CreateUniformBuffers();
 		CreateDiscriptorSetLayout();
-		CreateDescriptorPool();
-		CreateDescriptorSets();
 
-		CreateShaderStagePipeline();
-
-
-
-		const VkDevice& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
-
-		for (auto&& [type, module] : m_ShaderModules)
-		{
-			vkDestroyShaderModule(device, module, nullptr);
-		}
-
+		
 	}
 
 	Shader::~Shader()
@@ -294,11 +282,12 @@ namespace Rose
 		VkPipelineRasterizationStateCreateInfo rasterizer{};
 		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		rasterizer.depthClampEnable = VK_FALSE;
-		//rasterizer.rasterizerDiscardEnable = VK_FALSE;
+		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
 		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		rasterizer.depthBiasEnable = VK_FALSE;
 
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f;
@@ -309,9 +298,9 @@ namespace Rose
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 		multisampling.sampleShadingEnable = VK_FALSE;
 		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-		multisampling.minSampleShading = 1.0f;
+		multisampling.minSampleShading = 0.5f;
 		multisampling.pSampleMask = nullptr;
-		multisampling.alphaToCoverageEnable = VK_FALSE;
+		multisampling.alphaToCoverageEnable = VK_TRUE;
 		multisampling.alphaToOneEnable = VK_FALSE;
 
 		VkPipelineColorBlendAttachmentState colorBlendAttachment{};
@@ -328,8 +317,24 @@ namespace Rose
 		VkPipelineColorBlendStateCreateInfo colorBlending{};
 		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		colorBlending.logicOpEnable = VK_FALSE;
+		colorBlending.logicOp = VK_LOGIC_OP_COPY;
 		colorBlending.attachmentCount = 1;
 		colorBlending.pAttachments = &colorBlendAttachment;
+		colorBlending.blendConstants[0] = 0.0f;
+		colorBlending.blendConstants[1] = 0.0f;
+		colorBlending.blendConstants[2] = 0.0f;
+		colorBlending.blendConstants[3] = 0.0f;
+
+
+		VkPipelineDepthStencilStateCreateInfo depthStencil{};
+		depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depthStencil.depthTestEnable = VK_TRUE;
+		depthStencil.depthWriteEnable = VK_TRUE;
+		depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+		depthStencil.depthBoundsTestEnable = VK_TRUE;
+		depthStencil.minDepthBounds = 0.0f;
+		depthStencil.maxDepthBounds = 1.0f;
+		depthStencil.stencilTestEnable = VK_FALSE;
 
 		std::vector<VkDynamicState> dynamicStates = {
 			VK_DYNAMIC_STATE_VIEWPORT,
@@ -363,18 +368,46 @@ namespace Rose
 		colorAttachmentRef.attachment = 0;
 		colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+
+		VkAttachmentDescription depthAttachment{};
+		depthAttachment.format = Application::Get().GetContext()->GetPhysicalDevice()->FindDepthFormat();
+		depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+
+		VkAttachmentReference depthAttachmentRef{};
+		depthAttachmentRef.attachment = 1;
+		depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
 		VkSubpassDescription subpass{};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpass.colorAttachmentCount = 1;
 		subpass.pColorAttachments = &colorAttachmentRef;
+		subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
+		VkSubpassDependency dependency{};
+		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		dependency.dstSubpass = 0;
+		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		dependency.srcAccessMask = 0;
+		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+
+		std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
 		VkRenderPassCreateInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = 1;
-		renderPassInfo.pAttachments = &colorAttachment;
+		renderPassInfo.attachmentCount = attachments.size();
+		renderPassInfo.pAttachments = attachments.data();
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
-
+		renderPassInfo.dependencyCount = 1;
+		renderPassInfo.pDependencies = &dependency;
 
 		vkCreateRenderPass(device, &renderPassInfo, nullptr, &m_RenderPass);
 
@@ -382,7 +415,7 @@ namespace Rose
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.stageCount = 2;
+		pipelineInfo.stageCount = shaderStages.size();
 		pipelineInfo.pStages = shaderStages.data();
 
 		pipelineInfo.pVertexInputState = &vertexInputInfo;
@@ -390,7 +423,7 @@ namespace Rose
 		pipelineInfo.pViewportState = &viewportState;
 		pipelineInfo.pRasterizationState = &rasterizer;
 		pipelineInfo.pMultisampleState = &multisampling;
-		pipelineInfo.pDepthStencilState = nullptr;
+		pipelineInfo.pDepthStencilState = &depthStencil;
 		pipelineInfo.pColorBlendState = &colorBlending;
 		pipelineInfo.pDynamicState = nullptr;
 
@@ -540,7 +573,7 @@ namespace Rose
 
 	}
 
-	void Shader::CreateDescriptorPool()
+	void Shader::CreateDescriptorPool(const std::vector< MaterialUniform>& matUniforms)
 	{
 
 
@@ -589,7 +622,7 @@ namespace Rose
 		vkCreateDescriptorPool(device, &poolInfo, nullptr, &m_DescriptorPool);
 	}
 
-	void Shader::CreateDescriptorSets()
+	void Shader::CreateDescriptorSets(const std::vector< MaterialUniform>& matUniforms)
 	{
 		const auto& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 
@@ -643,12 +676,20 @@ namespace Rose
 					{
 						VkDescriptorImageInfo imageInfo{};
 
-						imageInfo.imageView = Application::Get().GetTexture()->GetImageView();
-						imageInfo.sampler = Application::Get().GetTexture()->GetSampler();
+
+						if (matUniforms.size())
+						{
+							imageInfo.imageView = matUniforms[0].Texture->GetImageView();
+							imageInfo.sampler = matUniforms[0].Texture->GetSampler();
+						}
+						else {
+							imageInfo.imageView = Material::DefaultWhiteTexture()->GetImageView();
+							imageInfo.sampler = Material::DefaultWhiteTexture()->GetSampler();
+						}
+
 						imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
 
 						VkWriteDescriptorSet imageDescWrite{};
-
 
 						imageDescWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 						imageDescWrite.dstSet = m_DescriptorSet;
@@ -668,6 +709,24 @@ namespace Rose
 
 
 		vkUpdateDescriptorSets(device, descWrites.size(), descWrites.data(), 0, nullptr);
+
+	}
+
+	void Shader::CreatePipelineAndDescriptorPool(const std::vector< MaterialUniform>& matUniforms)
+	{
+		CreateDescriptorPool(matUniforms);
+		CreateDescriptorSets(matUniforms);
+
+		CreateShaderStagePipeline();
+
+
+
+		const VkDevice& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
+
+		for (auto&& [type, module] : m_ShaderModules)
+		{
+			vkDestroyShaderModule(device, module, nullptr);
+		}
 
 	}
 

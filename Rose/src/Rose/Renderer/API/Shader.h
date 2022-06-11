@@ -177,6 +177,9 @@ namespace Rose
 		std::vector<ShaderAttribute> Attributes;
 	};
 
+
+
+	struct MaterialUniform;
 	class Shader
 	{
 
@@ -208,9 +211,11 @@ namespace Rose
 
 			void CreateDiscriptorSetLayout();
 
-			void CreateDescriptorPool();
-			void CreateDescriptorSets();
+			void CreateDescriptorPool(const std::vector< MaterialUniform>& matUniforms);
+			void CreateDescriptorSets(const std::vector< MaterialUniform>& matUniforms);
 
+
+			void CreatePipelineAndDescriptorPool(const std::vector< MaterialUniform>& matUniforms);
 
 		private :
 			void ParseShaders(const std::string& filepath);
