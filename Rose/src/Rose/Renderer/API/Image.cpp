@@ -8,7 +8,7 @@ namespace Rose
 {
 
 
-	Image::Image(int width, int height)
+	Image::Image(int width, int height, bool isNormalMap)
 	{
 		m_IsFreed = false;
 		VkImageCreateInfo imageInfo{};
@@ -20,7 +20,11 @@ namespace Rose
 		imageInfo.mipLevels = 1;
 		imageInfo.arrayLayers = 1;
 
-		imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+		if(!isNormalMap)
+			imageInfo.format = VK_FORMAT_R8G8B8A8_SRGB;
+		else
+			imageInfo.format = VK_FORMAT_R8G8B8A8_UNORM;
+
 		imageInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;

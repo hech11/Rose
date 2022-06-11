@@ -16,7 +16,7 @@ namespace Rose
 	{
 
 		Assimp::Importer importer;
-		const aiScene* scene = importer.ReadFile(filepath, aiPostProcessSteps::aiProcess_Triangulate);
+		const aiScene* scene = importer.ReadFile(filepath, aiPostProcessSteps::aiProcess_Triangulate | aiPostProcessSteps::aiProcess_CalcTangentSpace);
 
 
 		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
@@ -65,6 +65,11 @@ namespace Rose
  			vertex.Normal.y = mesh->mNormals[i].y;
  			vertex.Normal.z = mesh->mNormals[i].z;
  
+
+			vertex.Tangent.x = mesh->mTangents[i].x;
+			vertex.Tangent.y = mesh->mTangents[i].y;
+			vertex.Tangent.z = mesh->mTangents[i].z;
+
 			if (mesh->mTextureCoords[0])
 			{
 				vertex.TexCoord.x = mesh->mTextureCoords[0][i].x;
@@ -93,22 +98,23 @@ namespace Rose
 
 
 			aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
-			auto diffMaps = LoadTextures(material, aiTextureType_DIFFUSE);
-			result.Uniforms.insert(result.Uniforms.end(), diffMaps.begin(), diffMaps.end());
-
 
 			auto specMaps = LoadTextures(material, aiTextureType_SPECULAR);
 			result.Uniforms.insert(result.Uniforms.end(), specMaps.begin(), specMaps.end());
 
-
 			auto normMaps = LoadTextures(material, aiTextureType_NORMALS);
 			result.Uniforms.insert(result.Uniforms.end(), normMaps.begin(), normMaps.end());
+
+			auto diffMaps = LoadTextures(material, aiTextureType_DIFFUSE);
+			result.Uniforms.insert(result.Uniforms.end(), diffMaps.begin(), diffMaps.end());
+
 
 			ShaderAttributeLayout layout =
 			{
 				{"a_Position", 0, ShaderMemberType::Float3},
 				{"a_Normal", 1, ShaderMemberType::Float3},
-				{"a_TexCoord", 2, ShaderMemberType::Float2}
+				{"a_Tangent", 2, ShaderMemberType::Float3},
+				{"a_TexCoord", 3, ShaderMemberType::Float2}
 			};
 
 			result.ShaderData = std::make_shared<Rose::Shader>("assets/shaders/main.shader", layout);
@@ -145,8 +151,10 @@ namespace Rose
 
 			std::filesystem::path modelPath = m_Filepath;
 			std::filesystem::path modelParentPath = modelPath.parent_path();
+			TextureProperties props;
+			props.IsNormalMap = (type == aiTextureType_NORMALS);
 
-			uniform.Texture = std::make_shared<Texture2D>(modelParentPath.string() + std::string("/") +std::string(str.C_Str()));
+			uniform.Texture = std::make_shared<Texture2D>(modelParentPath.string() + std::string("/") +std::string(str.C_Str()), props);
 
 			result.push_back(uniform);
 		}

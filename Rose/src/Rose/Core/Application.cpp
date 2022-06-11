@@ -69,16 +69,20 @@ namespace Rose
 
 
 		ubo.Model = glm::mat4(1.0f);
-
 		while (!glfwWindowShouldClose(m_Window))
 		{
 			m_Camera->OnUpdate(0.016f);
 
 			if (useCamera)
 			{
+				ubo.View = m_Camera->GetCam().GetView();
+				ubo.Proj = m_Camera->GetCam().GetProj();
 				ubo.ViewProj = m_Camera->GetCam().GetProjView();
 			} else {
-				ubo.ViewProj = glm::perspective(glm::radians(60.0f), 16.0f / 9.0f, 0.1f, 1000.0f) * glm::translate(glm::mat4(1.0f), { 0.0f, 0.0f, -10.0f });
+				ubo.View = glm::translate(glm::mat4(1.0f), { 0.0f, 0.0f, -10.0f });
+				ubo.Proj = glm::perspective(glm::radians(60.0f), 16.0f / 9.0f, 0.1f, 1000.0f);
+				ubo.ViewProj = ubo.Proj * ubo.View;
+
 			}
 
 

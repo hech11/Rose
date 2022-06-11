@@ -331,7 +331,7 @@ namespace Rose
 		depthStencil.depthTestEnable = VK_TRUE;
 		depthStencil.depthWriteEnable = VK_TRUE;
 		depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
-		depthStencil.depthBoundsTestEnable = VK_TRUE;
+		depthStencil.depthBoundsTestEnable = VK_FALSE;
 		depthStencil.minDepthBounds = 0.0f;
 		depthStencil.maxDepthBounds = 1.0f;
 		depthStencil.stencilTestEnable = VK_FALSE;
@@ -636,7 +636,7 @@ namespace Rose
 
 
 		std::vector<VkWriteDescriptorSet> descWrites{};
-
+		std::vector<VkDescriptorImageInfo> imgInfos{};
 
 		for (auto& resource : m_Resources)
 		{
@@ -670,36 +670,47 @@ namespace Rose
 			if (resource.ImageBufferSize)
 			{
 
+				int i = 0;
+				imgInfos.resize(resource.ImageBufferSize);
+
 				for (auto& image : resource.ReflectedMembers)
 				{
 					if (image.Type == ShaderMemberType::SampledImage)
 					{
-						VkDescriptorImageInfo imageInfo{};
 
-
+					
 						if (matUniforms.size())
 						{
-							imageInfo.imageView = matUniforms[0].Texture->GetImageView();
-							imageInfo.sampler = matUniforms[0].Texture->GetSampler();
+							if (i < matUniforms.size())
+							{
+								imgInfos[i].imageView = matUniforms[i].Texture->GetImageView();
+								imgInfos[i].sampler = matUniforms[i].Texture->GetSampler();
+							}
+							LOG("%d\n", i);
 						}
 						else {
-							imageInfo.imageView = Material::DefaultWhiteTexture()->GetImageView();
-							imageInfo.sampler = Material::DefaultWhiteTexture()->GetSampler();
+							imgInfos[i].imageView = Material::DefaultWhiteTexture()->GetImageView();
+							imgInfos[i].sampler = Material::DefaultWhiteTexture()->GetSampler();
 						}
 
-						imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+						if (i < matUniforms.size())
+						{
+							imgInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+						}
 
 						VkWriteDescriptorSet imageDescWrite{};
 
 						imageDescWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
 						imageDescWrite.dstSet = m_DescriptorSet;
-						imageDescWrite.dstBinding = 1;
+						imageDescWrite.dstBinding = image.Binding;
 						imageDescWrite.dstArrayElement = 0;
 						imageDescWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
 						imageDescWrite.descriptorCount = 1;
-						imageDescWrite.pImageInfo = &imageInfo;
+						imageDescWrite.pImageInfo = &imgInfos[i];
 
 						descWrites.push_back(imageDescWrite);
+						i++;
+
 
 					}
 				}

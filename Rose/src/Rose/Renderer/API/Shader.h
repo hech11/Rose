@@ -87,6 +87,8 @@ namespace Rose
 	struct UniformBufferData
 	{
 		glm::mat4 Model =  glm::mat4(1.0f);
+		glm::mat4 View = glm::mat4(1.0f);
+		glm::mat4 Proj = glm::mat4(1.0f);
 		glm::mat4 ViewProj = glm::mat4(1.0f);
 	};
 

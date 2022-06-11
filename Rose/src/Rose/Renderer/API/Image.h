@@ -9,11 +9,12 @@ namespace Rose
 {
 
 
+
 	class Image
 	{
 
 		public :
-			Image(int width, int height);
+			Image(int width, int height, bool isNormalMap = false);
 			~Image();
 
 			const VkImage& GetImageBuffer() const { return m_BufferID; }
