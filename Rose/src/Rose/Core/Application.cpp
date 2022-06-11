@@ -33,12 +33,6 @@ namespace Rose
 		
 			
 		m_TestModel = std::make_shared<Model>("assets/models/coneandsphere.obj");
-// 		m_VertexData = {
-// 			{{-0.5f, -0.5f}, {1.0f, 0.0f, 0.0f}, {1.0f, 0.0f}},
-// 			{{0.5f,  -0.5f}, {0.0f, 1.0f, 0.0f}, {0.0f, 0.0f}},
-// 			{{0.5f, 0.5f}, {0.0f, 0.0f, 1.0f}, {0.0f, 1.0f}},
-// 			{{ -0.5f, 0.5f}, {1.0f, 1.0f, 1.0f}, {1.0f, 1.0f}}
-// 		};
 
 		m_IndexData =
 		{
@@ -92,7 +86,7 @@ namespace Rose
 
 
 			glfwPollEvents();
-			m_Shader->UpdateUniformBuffer(ubo);
+			m_Shader->UpdateUniformBuffer(&ubo, sizeof(ubo), 0);
 			DrawOntoScreen();
 
 		}
@@ -205,7 +199,13 @@ namespace Rose
 
 	void Application::CreateGraphicsPipeline()
 	{
-		m_Shader = std::make_shared<Shader>("assets/shaders/main.shader");
+		ShaderAttributeLayout layout =
+		{
+			{"a_Position", 0, ShaderMemberType::Float3},
+			{"a_Normal", 1, ShaderMemberType::Float3},
+			{"a_TexCoord", 2, ShaderMemberType::Float2}
+		};
+		m_Shader = std::make_shared<Shader>("assets/shaders/main.shader", layout);
 
 	}
 
@@ -246,7 +246,7 @@ namespace Rose
 				verts.push_back(triangle.Verticies[2]);
 			}
 
-			float size = sizeof(verts[0].Position) * verts.size();
+			float size = sizeof(Vertex) * verts.size();
 			m_VBOs.push_back(std::make_shared<Rose::VertexBuffer>(verts.data(), size));
 		}
 

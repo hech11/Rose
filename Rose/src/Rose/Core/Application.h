@@ -26,45 +26,7 @@
 
 namespace Rose
 {
-	struct VertexData
-	{
-		glm::vec3 Position;
-
-		static VkVertexInputBindingDescription GetBindingDescription() {
-
-			VkVertexInputBindingDescription result{};
-			result.binding = 0;
-			result.stride = sizeof(VertexData);
-			result.inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
-
-			return result;
-		}
-
-		static std::array<VkVertexInputAttributeDescription, 1> GetAttributeDescription()
-		{
-			std::array<VkVertexInputAttributeDescription, 1> result{};
-
-			result[0].binding = 0;
-			result[0].location = 0;
-			result[0].format = VK_FORMAT_R32G32B32_SFLOAT;
-			result[0].offset = offsetof(VertexData, Position);
-
-// 
-// 			result[1].binding = 0;
-// 			result[1].location = 1;
-// 			result[1].format = VK_FORMAT_R32G32B32_SFLOAT;
-// 			result[1].offset = offsetof(VertexData, Color);
-// 
-// 			result[2].binding = 0;
-// 			result[2].location = 2;
-// 			result[2].format = VK_FORMAT_R32G32_SFLOAT;
-// 			result[2].offset = offsetof(VertexData, TexCoord);
-
-			return result;
-
-		}
-	};
-
+	
 	enum class EventType
 	{
 		KeyPressed, KeyReleased,
@@ -147,7 +109,6 @@ namespace Rose
 			std::shared_ptr<SwapChain> m_SwapChain;
 
 
-			std::vector<Rose::VertexData> m_VertexData;
 			std::vector<uint32_t> m_IndexData;
 
 			std::vector<std::shared_ptr<Rose::VertexBuffer>> m_VBOs;

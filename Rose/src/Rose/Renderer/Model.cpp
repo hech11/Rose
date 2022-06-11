@@ -66,11 +66,38 @@ namespace Rose
 			vertex.Position.y = mesh->mVertices[i].y;
 			vertex.Position.z = mesh->mVertices[i].z;
 
+ 			vertex.Normal.x = mesh->mNormals[i].x;
+ 			vertex.Normal.y = mesh->mNormals[i].y;
+ 			vertex.Normal.z = mesh->mNormals[i].z;
+ 
+ 			vertex.TexCoord.x = 0.0f;
+ 			vertex.TexCoord.y = 0.0f;
+
 			triangle.Verticies[mult3] = vertex;
 
 			mult3++;
 		}
 
+
+		if (mult3 == 3)
+		{
+			Vertex vertex;
+			int i = mesh->mNumVertices;
+			vertex.Position.x = mesh->mVertices[i].x;
+			vertex.Position.y = mesh->mVertices[i].y;
+			vertex.Position.z = mesh->mVertices[i].z;
+
+			vertex.Normal.x = mesh->mNormals[i].x;
+			vertex.Normal.y = mesh->mNormals[i].y;
+			vertex.Normal.z = mesh->mNormals[i].z;
+
+			vertex.TexCoord.x = 0.0f;
+			vertex.TexCoord.y = 0.0f;
+
+
+			result.Triangles.push_back(triangle);
+
+		}
 
 		for (uint32_t i = 0; i < mesh->mNumFaces; i++)
 		{
