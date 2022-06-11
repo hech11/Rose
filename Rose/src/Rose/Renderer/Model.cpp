@@ -91,9 +91,11 @@ namespace Rose
 			vertex.Normal.y = mesh->mNormals[i].y;
 			vertex.Normal.z = mesh->mNormals[i].z;
 
-			vertex.TexCoord.x = 0.0f;
-			vertex.TexCoord.y = 0.0f;
-
+			if (mesh->mTextureCoords[0])
+			{
+				vertex.TexCoord.x = mesh->mTextureCoords[0][i].x;
+				vertex.TexCoord.y = mesh->mTextureCoords[0][i].y;
+			}
 
 			result.Triangles.push_back(triangle);
 
