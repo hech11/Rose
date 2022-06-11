@@ -16,6 +16,7 @@ namespace Rose
 
 		public :
 			Model(const std::string& filepath);
+			void CleanUp();
 
 
 			const std::vector<Mesh>& GetMeshes() const { return m_Meshes; }

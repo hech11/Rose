@@ -32,7 +32,7 @@ namespace Rose
 
 		static std::shared_ptr<Texture2D> DefaultWhiteTexture()
 		{
-			static std::shared_ptr <Texture2D> white = std::make_shared<Texture2D>("assets/textures/white.png");
+			static std::shared_ptr<Texture2D> white = std::make_shared<Texture2D>("assets/textures/white.png");
 			return white;
 		}
 	};

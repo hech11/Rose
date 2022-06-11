@@ -9,6 +9,8 @@
 namespace Rose
 {
 
+	uint32_t VKMemAllocator::s_Allocations=0;
+
 	VmaAllocator VKMemAllocator::s_Allocator;
 
 
@@ -27,6 +29,7 @@ namespace Rose
 
 	void VKMemAllocator::Shutdown()
 	{
+		LOG("Called VMA shutdown...there are '%d' allocations allocated\n", s_Allocations);
 		vmaDestroyAllocator(s_Allocator);
 	}
 
@@ -44,7 +47,8 @@ namespace Rose
 
 		VmaAllocation result;
 		vmaCreateBuffer(s_Allocator, &createInfo, &allocCreateInfo, outBuffer, &result, nullptr);
-
+		s_Allocations++;
+		LOG("VMA AllocBuffer: %d\n", s_Allocations);
 		return result;
 
 	}
@@ -64,6 +68,8 @@ namespace Rose
 		VmaAllocation result;
 		vmaCreateImage(s_Allocator, &createInfo, &allocCreateInfo, outImage, &result, nullptr);
 
+		s_Allocations++;
+		LOG("VMA AllocImage: %d\n", s_Allocations);
 		return result;
 
 	}
@@ -82,12 +88,16 @@ namespace Rose
 	void VKMemAllocator::Free(VmaAllocation allocation, VkBuffer buffer)
 	{
 		vmaDestroyBuffer(s_Allocator, buffer, allocation);
+		s_Allocations--;
+		LOG("VMA FreeBuffer: %d\n", s_Allocations);
 	}
 
 
 	void VKMemAllocator::Free(VmaAllocation allocation, VkImage image)
 	{
 		vmaDestroyImage(s_Allocator, image, allocation);
+		s_Allocations--;
+		LOG("VMA FreeImage: %d\n", s_Allocations);
 	}
 
 

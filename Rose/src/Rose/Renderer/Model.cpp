@@ -30,6 +30,18 @@ namespace Rose
 	}
 
 
+	void Model::CleanUp()
+	{
+		for (auto& material : m_Materials)
+		{
+			material.ShaderData->DestroyPipeline();
+			for (auto& uniform : material.Uniforms)
+			{
+				uniform.Texture->Destroy();
+			}
+		}
+	}
+
 	void Model::ProcessNode(aiNode* node, const aiScene* scene)
 	{
 		for (uint32_t i = 0; i < node->mNumMeshes; i++)
@@ -109,6 +121,7 @@ namespace Rose
 			result.Uniforms.insert(result.Uniforms.end(), diffMaps.begin(), diffMaps.end());
 
 
+		
 			ShaderAttributeLayout layout =
 			{
 				{"a_Position", 0, ShaderMemberType::Float3},
@@ -118,6 +131,7 @@ namespace Rose
 			};
 
 			result.ShaderData = std::make_shared<Rose::Shader>("assets/shaders/main.shader", layout);
+		
 			result.ShaderData->CreatePipelineAndDescriptorPool(result.Uniforms);
 
 			m_Materials.push_back(result);

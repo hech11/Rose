@@ -28,6 +28,7 @@ namespace Rose
 
 
 		private :
+			static uint32_t s_Allocations; //TODO: IMPROVE THIS!
 			static VmaAllocator s_Allocator;
 	};
 

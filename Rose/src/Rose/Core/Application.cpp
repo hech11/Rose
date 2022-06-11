@@ -370,7 +370,7 @@ namespace Rose
 
 
 		m_ImguiLayer->Shutdown();
-
+		m_TestModel->CleanUp();
 		VKMemAllocator::Shutdown();
 
 		m_RenderingContext->GetLogicalDevice()->Shutdown();
