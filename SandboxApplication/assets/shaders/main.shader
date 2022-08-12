@@ -68,6 +68,22 @@ layout(set = 0, binding = 1) uniform sampler2D u_AlbedoMap;
 layout(set = 0, binding = 2) uniform sampler2D u_NormalMap;
 
 
+
+
+struct DirectionLight
+{
+	vec3 Direction;
+	vec3 Radience;
+};
+
+struct PointLight
+{
+	vec3 Position;
+	vec3 Radience;
+	float Radius;
+};
+
+
 struct VertexOutput
 {
 	vec3 WorldPosition;
@@ -132,48 +148,33 @@ vec3 NormalMap()
 	return normalize(v_Input.WorldNormals * tangentNormal);
 }
 
-void main()
+
+vec3 CalcDirectionLight(DirectionLight light, vec3 F0, vec3 albedo, vec3 N, float metallic, float roughness, float ao, vec3 worldPos)
 {
 
+	vec3 LightColor = light.Radience;
 
-	vec3 albedo = pow(texture(u_AlbedoMap, v_Input.TexCoord).rgb, vec3(2.2));
-	float metallic = 0.1f;
-	float roughness = 0.8f;
-	float ao = 1.0f;
+	vec3 WorldPos = worldPos;
 
-	vec3 LightColor = vec3(50.0, 50.0, 50.0);
-
-	vec3 WorldPos = v_Input.WorldPosition;
-	vec3 LightPos = { 0.0f, 20.0f, 0.0f };
-
-	vec3 N = NormalMap();
-	vec3 V = normalize(v_Input.ViewPosition - WorldPos);
-
-	vec3 F0 = vec3(0.04);
-	F0 = mix(F0, albedo, metallic);
-
-	vec3 Lo = vec3(0.0);
+	vec3 V = normalize(v_Input.ViewPosition - worldPos);
 
 
-	vec3 L = normalize(LightPos - WorldPos);
+	vec3 Lo = vec3(0.0f);
+
+	vec3 L = light.Direction;
 
 	float cosTheta = max(dot(N, L), 0.0);
 	vec3 H = normalize(V + L);
-	float distance = length(LightPos - WorldPos);
-	float radius = 250.0;
 
-	float attenuation = clamp(1.0 - (distance * distance) / (radius* radius), 0.0, 1.0);
-	attenuation *= mix(attenuation, 1.0, 1.0); // falloff
 
-	vec3 radiance = LightColor * attenuation * cosTheta;
+	vec3 radiance = LightColor * cosTheta;
 
+
+	vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
 
 
 	float NDF = DistributionGGX(N, H, roughness);
 	float G = GeometrySmith(N, V, L, roughness);
-	vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
-
-
 	vec3 numerator = NDF * G * F;
 	float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
 	vec3 specular = numerator / denominator;
@@ -185,12 +186,100 @@ void main()
 	float NdotL = max(dot(N, L), 0.0);
 	Lo += (kD * albedo / PI + specular) * radiance * NdotL;
 
-	float ambientStrength = 0.03f;
+	return Lo;
+}
+
+
+vec3 CalcPointLight(PointLight light, vec3 F0, vec3 albedo, vec3 N, float metallic, float roughness, float ao, vec3 worldPos)
+{
+	
+	vec3 LightColor = light.Radience;
+
+	vec3 WorldPos = worldPos;
+	vec3 LightPos = light.Position;
+
+	vec3 V = normalize(v_Input.ViewPosition - worldPos);
+
+
+	vec3 Lo = vec3(0.0);
+
+	vec3 L = normalize(LightPos - WorldPos);
+
+	float cosTheta = max(dot(N, L), 0.0);
+	vec3 H = normalize(V + L);
+	float distance = length(LightPos - WorldPos);
+	float radius = light.Radius;
+
+	float attenuation = clamp(1.0 - (distance * distance) / (radius * radius), 0.0, 1.0);
+	attenuation *= mix(attenuation, 1.0, 1.0); // falloff
+
+	vec3 radiance = LightColor * attenuation * cosTheta;
+
+
+	vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+
+
+	float NDF = DistributionGGX(N, H, roughness);
+	float G = GeometrySmith(N, V, L, roughness);
+	vec3 numerator = NDF * G * F;
+	float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
+	vec3 specular = numerator / denominator;
+
+	vec3 kS = F;
+	vec3 kD = vec3(1.0) - kS;
+	kD *= 1.0 - metallic;
+
+	float NdotL = max(dot(N, L), 0.0);
+	Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+
+	return Lo;
+}
+
+void main()
+{
+
+	vec3 albedo = pow(texture(u_AlbedoMap, v_Input.TexCoord).rgb, vec3(2.2));
+	float metallic = 0.2f;
+	float roughness = 1.0f;
+	float ao = 0.1f;
+
+	vec3 N = NormalMap();
+
+	
+	vec3 F0 = vec3(0.04);
+	F0 = mix(F0, albedo, metallic);
+
+	vec3 color = vec3(0.1f);
+
+
+	DirectionLight dirLight;
+	dirLight.Direction = vec3(0.5f, 1.0f, 0.5f);
+	dirLight.Radience = vec3(1.0f);
+
+	PointLight light1;
+	light1.Position = vec3(0.0f, 20.0f, 0.0f);
+	light1.Radience = vec3(5.0f, 5.0f, 5.0f);
+	light1.Radius = 250.0f;
+
+
+	color = CalcDirectionLight(dirLight, F0, albedo, N, metallic, roughness, ao, v_Input.WorldPosition);
+	color += CalcPointLight(light1, F0, albedo, N, metallic, roughness, ao, v_Input.WorldPosition);
+
+	PointLight light2;
+	light2.Position = vec3(150.0f, 20.0f, 0.0f);
+	light2.Radience = vec3(15.0f, 5.0f, 5.0f);
+	light2.Radius = 150.0f;
+
+	color += CalcPointLight(light2, F0, albedo, N, metallic, roughness, ao, v_Input.WorldPosition);
+
+
+	float ambientStrength = 0.02f;
 	vec3 ambient = ambientStrength * albedo;
-	vec3 color = ambient + Lo;
+	color += ambient;
 
 	color = color / (color + vec3(1.0));
 	color = pow(color, vec3(1.0 / 2.2));
+
 
 //	if (color.a < 0.8)
 		//discard;
