@@ -113,6 +113,10 @@ namespace Rose
 			std::vector<std::shared_ptr<Rose::IndexBuffer>> m_IBOs;
 
 
+			std::vector<std::shared_ptr<Rose::VertexBuffer>> m_SphereVbo;
+			std::vector<std::shared_ptr<Rose::IndexBuffer>> m_SphereIbo;
+
+
 			std::shared_ptr<Rose::PerspectiveCameraController> m_Camera;
 
 
@@ -121,6 +125,7 @@ namespace Rose
 			VkCommandBuffer m_VKCommandBuffer;
 
 			std::shared_ptr<Model> m_TestModel;
+			std::shared_ptr<Model> m_SphereModel;
 
 
 			static Application* s_INSTANCE;

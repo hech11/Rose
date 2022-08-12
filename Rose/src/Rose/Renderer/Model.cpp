@@ -82,6 +82,10 @@ namespace Rose
 			vertex.Tangent.y = mesh->mTangents[i].y;
 			vertex.Tangent.z = mesh->mTangents[i].z;
 
+			vertex.Bitangent.x = mesh->mBitangents[i].x;
+			vertex.Bitangent.y = mesh->mBitangents[i].y;
+			vertex.Bitangent.z = mesh->mBitangents[i].z;
+
 			if (mesh->mTextureCoords[0])
 			{
 				vertex.TexCoord.x = mesh->mTextureCoords[0][i].x;
@@ -127,7 +131,8 @@ namespace Rose
 				{"a_Position", 0, ShaderMemberType::Float3},
 				{"a_Normal", 1, ShaderMemberType::Float3},
 				{"a_Tangent", 2, ShaderMemberType::Float3},
-				{"a_TexCoord", 3, ShaderMemberType::Float2}
+				{"a_Bitangent", 3, ShaderMemberType::Float3},
+				{"a_TexCoord", 4, ShaderMemberType::Float2}
 			};
 
 			result.ShaderData = std::make_shared<Rose::Shader>("assets/shaders/main.shader", layout);

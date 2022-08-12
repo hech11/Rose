@@ -39,6 +39,7 @@ namespace Rose
 
 		VKMemAllocator::Init();
 		m_TestModel = std::make_shared<Model>("assets/models/sponza/sponza.gltf");
+		m_SphereModel = std::make_shared<Model>("assets/models/sphere.fbx");
 		//m_TestModel = std::make_shared<Model>("assets/models/coneandsphere.obj");
 
 
@@ -54,8 +55,8 @@ namespace Rose
 		CleanUp();
 	}
 
-	static glm::vec3 quadPos = { 0.0f, 0.0f, 0.0f };
-	static glm::vec3 quadScale = { 0.1f, 0.1f, 0.1f };
+	static glm::vec3 spherePos = { 0.0f, 0.0f, 0.0f };
+	static glm::vec3 sphereScale = { 0.1f, 0.1f, 0.1f };
 
 	void Application::Run()
 	{
@@ -88,6 +89,11 @@ namespace Rose
 
 			glfwPollEvents();
 			for (auto& mat : m_TestModel->GetMaterials())
+			{
+				mat.ShaderData->UpdateUniformBuffer(&ubo, sizeof(ubo), 0);
+			}
+
+			for (auto& mat : m_SphereModel->GetMaterials())
 			{
 				mat.ShaderData->UpdateUniformBuffer(&ubo, sizeof(ubo), 0);
 			}
@@ -242,6 +248,15 @@ namespace Rose
 			m_VBOs.push_back(std::make_shared<Rose::VertexBuffer>(verticies.data(), size));
 		}
 
+		for (auto& mesh : m_SphereModel->GetMeshes())
+		{
+			auto& verticies = mesh.Verticies;
+
+			float size = sizeof(Vertex) * verticies.size();
+			m_SphereVbo.push_back(std::make_shared<Rose::VertexBuffer>(verticies.data(), size));
+		}
+
+
 	}
 
 	void Application::CreateIndexBuffer()
@@ -251,6 +266,11 @@ namespace Rose
 		{
 			auto& indicies = mesh.Indicies;
 			m_IBOs.push_back(std::make_shared<Rose::IndexBuffer>(indicies.data(), sizeof(indicies[0]) * indicies.size()));
+		}
+		for (auto& mesh : m_SphereModel->GetMeshes())
+		{
+			auto& indicies = mesh.Indicies;
+			m_SphereIbo.push_back(std::make_shared<Rose::IndexBuffer>(indicies.data(), sizeof(indicies[0]) * indicies.size()));
 		}
 
 		
@@ -302,7 +322,6 @@ namespace Rose
 		for (int i = 0; i < m_VBOs.size(); i++)
 		{
 
-
 			VkBuffer vbos[] = { m_VBOs[i]->GetBufferID() };
 			VkDeviceSize offset[] = { 0 };
 
@@ -316,7 +335,22 @@ namespace Rose
 			vkCmdBindDescriptorSets(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetPipelineLayout(), 0, 1, &shader->GetDescriptorSet(), 0, nullptr);
 			vkCmdDrawIndexed(m_VKCommandBuffer, m_TestModel->GetMeshes()[i].Indicies.size(), 1, 0, 0, 0);
 
+		}
+		for (int i = 0; i < m_SphereVbo.size(); i++)
+		{
 
+			VkBuffer vbos[] = { m_SphereVbo[i]->GetBufferID() };
+			VkDeviceSize offset[] = { 0 };
+
+			const auto& shader = m_SphereModel->GetMaterials()[i].ShaderData;
+
+			vkCmdBindPipeline(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetGrahpicsPipeline());
+
+			vkCmdBindVertexBuffers(m_VKCommandBuffer, 0, 1, vbos, offset);
+			vkCmdBindIndexBuffer(m_VKCommandBuffer, m_SphereIbo[i]->GetBufferID(), 0, VK_INDEX_TYPE_UINT32);
+
+			vkCmdBindDescriptorSets(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetPipelineLayout(), 0, 1, &shader->GetDescriptorSet(), 0, nullptr);
+			vkCmdDrawIndexed(m_VKCommandBuffer, m_SphereModel->GetMeshes()[i].Indicies.size(), 1, 0, 0, 0);
 
 		}
 		OnImguiRender();
@@ -390,8 +424,8 @@ namespace Rose
 	{
 		ImGui::Begin("Test window!");
 		ImGui::Text("This is some text");
-		ImGui::SliderFloat3("model pos", &quadPos.x, -10.0f, 10.0f);
-		ImGui::SliderFloat3("model scale", &quadScale.x, -10.0f, 10.0f);
+		ImGui::SliderFloat3("model pos", &spherePos.x, -10.0f, 10.0f);
+		ImGui::SliderFloat3("model scale", &sphereScale.x, -10.0f, 10.0f);
 		ImGui::Checkbox("Use camera", &useCamera);
 		ImGui::End();
 	}

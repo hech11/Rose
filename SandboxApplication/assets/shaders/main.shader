@@ -5,7 +5,8 @@
 layout(location = 0) in vec3 a_Position;
 layout(location = 1) in vec3 a_Normal;
 layout(location = 2) in vec3 a_Tangent;
-layout(location = 3) in vec2 a_TexCoord;
+layout(location = 3) in vec3 a_Bitangent;
+layout(location = 4) in vec2 a_TexCoord;
 
 
 struct VertexOutput
@@ -14,11 +15,14 @@ struct VertexOutput
 	vec3 Normal;
 	vec2 TexCoord;
 	vec3 Tangent;
+	vec3 Bitangent;
 	mat3 WorldNormals;
 	mat3 WorldTransform;
 
 	mat3 CameraView;
 	vec3 ViewPosition;
+
+	mat4 Model;
 };
 
 layout(location = 0) out VertexOutput v_Output;
@@ -35,17 +39,19 @@ layout(binding = 0) uniform BufferObject
 
 void main()
 {
-
 	vec4 worldPos = ubo.Model * vec4(a_Position, 1.0);
 	v_Output.WorldPosition = worldPos.xyz;
 	v_Output.Normal = mat3(ubo.Model) * a_Normal;
 	v_Output.TexCoord = a_TexCoord;
 	v_Output.Tangent = a_Tangent;
+	v_Output.Bitangent = a_Bitangent;
 
+
+	v_Output.Model = ubo.Model;
 
 	mat3 nMatrix = transpose(inverse(mat3(ubo.Model)));
 
-	vec3 T = normalize(nMatrix * a_Tangent.xyz);
+	vec3 T = normalize(nMatrix * a_Bitangent.xyz);
 	vec3 N = normalize(nMatrix * a_Normal.xyz);
 
 	vec3 B = normalize(cross(N, T)* 1.0f);
@@ -55,7 +61,7 @@ void main()
 	v_Output.CameraView = mat3(ubo.View);
 
 
-	v_Output.ViewPosition = vec3(ubo.View * worldPos);
+	v_Output.ViewPosition = vec3(ubo.View * vec4(v_Output.WorldPosition, 1.0f));
 
 	gl_Position = ubo.ViewProj * worldPos;
 }
@@ -90,11 +96,16 @@ struct VertexOutput
 	vec3 Normal;
 	vec2 TexCoord;
 	vec3 Tangent;
+	vec3 Bitangent;
+
 	mat3 WorldNormals;
 	mat3 WorldTransform;
 
 	mat3 CameraView;
 	vec3 ViewPosition;
+
+	mat4 Model;
+
 };
 layout(location = 0) in VertexOutput v_Input;
 
@@ -206,7 +217,7 @@ vec3 CalcPointLight(PointLight light, vec3 F0, vec3 albedo, vec3 N, float metall
 	vec3 L = normalize(LightPos - WorldPos);
 
 	float cosTheta = max(dot(N, L), 0.0);
-	vec3 H = normalize(V + L);
+	vec3 H = normalize(V+L);
 	float distance = length(LightPos - WorldPos);
 	float radius = light.Radius;
 
@@ -243,7 +254,7 @@ void main()
 	float roughness = 1.0f;
 	float ao = 0.1f;
 
-	vec3 N = NormalMap();
+	vec3 NN = NormalMap();
 
 	
 	vec3 F0 = vec3(0.04);
@@ -257,20 +268,33 @@ void main()
 	dirLight.Radience = vec3(1.0f);
 
 	PointLight light1;
-	light1.Position = vec3(0.0f, 20.0f, 0.0f);
+	light1.Position = vec3(0.0f, 60.0f, 0.0f);
 	light1.Radience = vec3(5.0f, 5.0f, 5.0f);
 	light1.Radius = 250.0f;
 
 
-	color = CalcDirectionLight(dirLight, F0, albedo, N, metallic, roughness, ao, v_Input.WorldPosition);
-	color += CalcPointLight(light1, F0, albedo, N, metallic, roughness, ao, v_Input.WorldPosition);
+	/*mat3 nMatrix = transpose(inverse(mat3(v_Input.Model)));
 
-	PointLight light2;
-	light2.Position = vec3(150.0f, 20.0f, 0.0f);
-	light2.Radience = vec3(15.0f, 5.0f, 5.0f);
-	light2.Radius = 150.0f;
+	vec3 T = normalize(nMatrix * v_Input.Tangent.xyz);
+	vec3 N = normalize(nMatrix * v_Input.Normal.xyz);
 
-	color += CalcPointLight(light2, F0, albedo, N, metallic, roughness, ao, v_Input.WorldPosition);
+	vec3 B = normalize(cross(T, N));
+
+	mat3 wNormal = mat3(T, B, N);
+	vec3 tangentNormal = texture(u_NormalMap, v_Input.TexCoord).xyz * 2.0 - 1.0;
+
+	NN = wNormal * tangentNormal;
+	*/
+	//color = CalcDirectionLight(dirLight, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
+	color = CalcPointLight(light1, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
+
+
+//	PointLight light2;
+//	light2.Position = vec3(150.0f, 20.0f, 0.0f);
+//	light2.Radience = vec3(15.0f, 5.0f, 5.0f);
+//	light2.Radius = 150.0f;
+//
+//	color += CalcPointLight(light2, F0, albedo, Normals , metallic, roughness, ao, v_Input.WorldPosition);
 
 
 	float ambientStrength = 0.02f;
