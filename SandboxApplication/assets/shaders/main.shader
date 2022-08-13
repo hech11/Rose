@@ -286,7 +286,7 @@ void main()
 	NN = wNormal * tangentNormal;
 	*/
 	//color = CalcDirectionLight(dirLight, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
-	color = CalcPointLight(light1, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
+	color = albedo;// CalcPointLight(light1, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
 
 
 //	PointLight light2;
@@ -297,9 +297,9 @@ void main()
 //	color += CalcPointLight(light2, F0, albedo, Normals , metallic, roughness, ao, v_Input.WorldPosition);
 
 
-	float ambientStrength = 0.02f;
-	vec3 ambient = ambientStrength * albedo;
-	color += ambient;
+//	float ambientStrength = 0.02f;
+//	vec3 ambient = ambientStrength * albedo;
+//	color += ambient;
 
 	color = color / (color + vec3(1.0));
 	color = pow(color, vec3(1.0 / 2.2));

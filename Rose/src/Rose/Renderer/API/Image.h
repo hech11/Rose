@@ -14,7 +14,7 @@ namespace Rose
 	{
 
 		public :
-			Image(int width, int height, bool isNormalMap = false);
+			Image(int width, int height, bool isNormalMap = false, uint32_t mipMapLevel = 1);
 			~Image();
 
 			const VkImage& GetImageBuffer() const { return m_BufferID; }
@@ -29,10 +29,11 @@ namespace Rose
 
 			const std::vector<VkImageView>& GetImageViews() const { return m_ImageViews; }
 
+
 		private :
 			VkImage m_BufferID;
 			VmaAllocation m_MemoryAllocation;
-
+			uint32_t m_MipLevel = 0;
 			std::vector<VkImageView> m_ImageViews;
 
 			bool m_IsFreed = true;
