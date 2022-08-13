@@ -38,8 +38,8 @@ namespace Rose
 		CreateVulkanInstance();
 
 		VKMemAllocator::Init();
-		//m_TestModel = std::make_shared<Model>("assets/models/sponza/sponza.gltf");
-		m_TestModel = std::make_shared<Model>("assets/models/sphere.fbx");
+		m_TestModel = std::make_shared<Model>("assets/models/sponza/sponza.gltf");
+		//m_TestModel = std::make_shared<Model>("assets/models/sphere.fbx");
 		m_SphereModel = std::make_shared<Model>("assets/models/sphere.fbx");
 		//m_TestModel = std::make_shared<Model>("assets/models/coneandsphere.obj");
 

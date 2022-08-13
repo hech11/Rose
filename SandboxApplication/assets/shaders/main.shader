@@ -265,11 +265,11 @@ void main()
 
 	DirectionLight dirLight;
 	dirLight.Direction = vec3(0.5f, 1.0f, 0.5f);
-	dirLight.Radience = vec3(1.0f);
+	dirLight.Radience = vec3(245.0f/ 256.0f, 66.0f / 256.0f, 90.0f / 256.0f)*2.5f;
 
 	PointLight light1;
 	light1.Position = vec3(0.0f, 60.0f, 0.0f);
-	light1.Radience = vec3(5.0f, 5.0f, 5.0f);
+	light1.Radience = vec3(15.0f, 15.0f, 12.0f);
 	light1.Radius = 250.0f;
 
 
@@ -285,21 +285,22 @@ void main()
 
 	NN = wNormal * tangentNormal;
 	*/
-	//color = CalcDirectionLight(dirLight, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
-	color = albedo;// CalcPointLight(light1, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
+	color = CalcDirectionLight(dirLight, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
+	color += CalcPointLight(light1, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
 
 
-//	PointLight light2;
-//	light2.Position = vec3(150.0f, 20.0f, 0.0f);
-//	light2.Radience = vec3(15.0f, 5.0f, 5.0f);
-//	light2.Radius = 150.0f;
-//
-//	color += CalcPointLight(light2, F0, albedo, Normals , metallic, roughness, ao, v_Input.WorldPosition);
+	PointLight light2;
+	light2.Position = vec3(150.0f*2, 20.0f, 0.0f);
+	light2.Radience = vec3(15.0f, 15.0f, 25.0f);
+	light2.Radius = 150.0f;
+
+	color += CalcPointLight(light2, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
 
 
-//	float ambientStrength = 0.02f;
-//	vec3 ambient = ambientStrength * albedo;
-//	color += ambient;
+
+	float ambientStrength = 0.02f;
+	vec3 ambient = ambientStrength * albedo;
+	color += ambient;
 
 	color = color / (color + vec3(1.0));
 	color = pow(color, vec3(1.0 / 2.2));

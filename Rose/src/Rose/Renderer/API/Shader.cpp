@@ -295,7 +295,7 @@ namespace Rose
 
 		VkPipelineMultisampleStateCreateInfo multisampling{};
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-		multisampling.sampleShadingEnable = VK_TRUE;
+		multisampling.sampleShadingEnable = VK_FALSE;
 		multisampling.rasterizationSamples = Application::Get().GetContext()->GetPhysicalDevice()->GetMSAASampleCount();
 		multisampling.minSampleShading = 0.5f;
 		multisampling.pSampleMask = nullptr;
