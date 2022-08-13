@@ -38,11 +38,56 @@ namespace Rose
 			}
 		}
 
+		static std::string FromShaderTypeToString(ShaderModuleTypes type)
+		{
+			switch (type)
+			{
+				case Rose::ShaderModuleTypes::Vertex: return "vertex";
+				case Rose::ShaderModuleTypes::Pixel: return "pixel";
+			}
+		}
+
+		
+		static std::string FromShaderMemberTypeToString(ShaderMemberType type)
+		{
+			switch (type)
+			{
+				case Rose::ShaderMemberType::None: return "None?";
+				case Rose::ShaderMemberType::Int8: return "Int8";
+				case Rose::ShaderMemberType::Int16: return "Int16";
+				case Rose::ShaderMemberType::UInt32: return "UInt32";
+				case Rose::ShaderMemberType::Float: return "Float";
+				case Rose::ShaderMemberType::Bool: return "Bool";
+				case Rose::ShaderMemberType::Mat4: return "Mat4";
+				case Rose::ShaderMemberType::SampledImage: return "SampledImage";
+				default: return "Not listed!";
+			}
+		}
+
+		static ShaderMemberType FromSpirVTypeToShaderMemberType(const spirv_cross::SPIRType& type)
+		{
+			switch (type.basetype)
+			{
+				case spirv_cross::SPIRType::BaseType::Char: return ShaderMemberType::Int8;
+				case spirv_cross::SPIRType::BaseType::Short: return ShaderMemberType::Int16;
+				case spirv_cross::SPIRType::BaseType::Int: return ShaderMemberType::Int32;
+				case spirv_cross::SPIRType::BaseType::Float:
+				{
+					if (type.columns == 4)
+						return ShaderMemberType::Mat4;
+
+					return ShaderMemberType::Float;
+				}
+				case spirv_cross::SPIRType::BaseType::SampledImage: return ShaderMemberType::SampledImage;
+			}
+		}
+
+
 	}
 
 
-	Shader::Shader(const std::string& filepath) 
-		: m_Filepath(filepath)
+	Shader::Shader(const std::string& filepath, const ShaderAttributeLayout& layout)
+		: m_Filepath(filepath), m_AttributeLayout(layout)
 	{
 		m_Name = std::filesystem::path(m_Filepath).stem().string();
 		ParseShaders(m_Filepath);
@@ -53,22 +98,10 @@ namespace Rose
 			m_ShaderModules[type] = CreateModule(compiledSources);
 		}
 
-		CreateUniformBuffer();
+		CreateUniformBuffers();
 		CreateDiscriptorSetLayout();
-		CreateDescriptorPool();
-		CreateDescriptorSets();
 
-		CreateShaderStagePipeline();
-
-
-
-		const VkDevice& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
-
-		for (auto&& [type, module] : m_ShaderModules)
-		{
-			vkDestroyShaderModule(device, module, nullptr);
-		}
-
+		
 	}
 
 	Shader::~Shader()
@@ -80,8 +113,13 @@ namespace Rose
 
 
 		const VkDevice& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
-		vkDestroyBuffer(device, m_UniformBuffer, nullptr);
-		vkFreeMemory(device, m_UBDeviceMemory, nullptr);
+
+		for (auto& ubo : m_UniformBuffers)
+		{
+			vkDestroyBuffer(device, ubo.Buffer, nullptr);
+			vkFreeMemory(device, ubo.DeviceMemory, nullptr);
+		}
+
 
 		vkDestroyDescriptorSetLayout(device, m_DescriptorSetLayout, nullptr);
 		vkDestroyDescriptorPool(device, m_DescriptorPool, nullptr);
@@ -123,8 +161,8 @@ namespace Rose
 			}
 			else
 			{
-				shaderSources[currentShaderType].first = currentShaderType;
-				shaderSources[currentShaderType].second << line << "\n";
+				shaderSources[(int)currentShaderType].first = currentShaderType;
+				shaderSources[(int)currentShaderType].second << line << "\n";
 			}
 		}
 		for (auto& sources : shaderSources)
@@ -159,6 +197,11 @@ namespace Rose
 			}
 
 			m_CompiledShaderSources[type] = std::vector<uint32_t>(results.cbegin(), results.cend());
+		}
+
+		for (auto& [type, data] : m_CompiledShaderSources)
+		{
+			Reflect(type, data, true);
 		}
 
 	}
@@ -197,8 +240,11 @@ namespace Rose
 			shaderStages.push_back(stageInfo);
 		}
 
-		auto bindingDesc = VertexData::GetBindingDescription();
-		auto attributeDesc = VertexData::GetAttributeDescription();
+		
+
+		auto bindingDesc = m_AttributeLayout.BindingDescription;
+		auto attributeDesc = m_AttributeLayout.ReturnVKAttribues();
+		
 
 		VkPipelineVertexInputStateCreateInfo vertexInputInfo{};
 		vertexInputInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
@@ -236,11 +282,12 @@ namespace Rose
 		VkPipelineRasterizationStateCreateInfo rasterizer{};
 		rasterizer.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO;
 		rasterizer.depthClampEnable = VK_FALSE;
-		//rasterizer.rasterizerDiscardEnable = VK_FALSE;
+		rasterizer.rasterizerDiscardEnable = VK_FALSE;
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
-		rasterizer.cullMode = VK_CULL_MODE_NONE;
+		rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 		rasterizer.frontFace = VK_FRONT_FACE_COUNTER_CLOCKWISE;
+		rasterizer.depthBiasEnable = VK_FALSE;
 
 		rasterizer.depthBiasEnable = VK_FALSE;
 		rasterizer.depthBiasConstantFactor = 0.0f;
@@ -251,9 +298,9 @@ namespace Rose
 		multisampling.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
 		multisampling.sampleShadingEnable = VK_FALSE;
 		multisampling.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
-		multisampling.minSampleShading = 1.0f;
+		multisampling.minSampleShading = 0.5f;
 		multisampling.pSampleMask = nullptr;
-		multisampling.alphaToCoverageEnable = VK_FALSE;
+		multisampling.alphaToCoverageEnable = VK_TRUE;
 		multisampling.alphaToOneEnable = VK_FALSE;
 
 		VkPipelineColorBlendAttachmentState colorBlendAttachment{};
@@ -270,8 +317,24 @@ namespace Rose
 		VkPipelineColorBlendStateCreateInfo colorBlending{};
 		colorBlending.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
 		colorBlending.logicOpEnable = VK_FALSE;
+		colorBlending.logicOp = VK_LOGIC_OP_COPY;
 		colorBlending.attachmentCount = 1;
 		colorBlending.pAttachments = &colorBlendAttachment;
+		colorBlending.blendConstants[0] = 0.0f;
+		colorBlending.blendConstants[1] = 0.0f;
+		colorBlending.blendConstants[2] = 0.0f;
+		colorBlending.blendConstants[3] = 0.0f;
+
+
+		VkPipelineDepthStencilStateCreateInfo depthStencil{};
+		depthStencil.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
+		depthStencil.depthTestEnable = VK_TRUE;
+		depthStencil.depthWriteEnable = VK_TRUE;
+		depthStencil.depthCompareOp = VK_COMPARE_OP_LESS;
+		depthStencil.depthBoundsTestEnable = VK_FALSE;
+		depthStencil.minDepthBounds = 0.0f;
+		depthStencil.maxDepthBounds = 1.0f;
+		depthStencil.stencilTestEnable = VK_FALSE;
 
 		std::vector<VkDynamicState> dynamicStates = {
 			VK_DYNAMIC_STATE_VIEWPORT,
@@ -305,18 +368,46 @@ namespace Rose
 		colorAttachmentRef.attachment = 0;
 		colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
 
+
+		VkAttachmentDescription depthAttachment{};
+		depthAttachment.format = Application::Get().GetContext()->GetPhysicalDevice()->FindDepthFormat();
+		depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+		depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+		depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+		depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+		depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+		depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+
+		VkAttachmentReference depthAttachmentRef{};
+		depthAttachmentRef.attachment = 1;
+		depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
 		VkSubpassDescription subpass{};
 		subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
 		subpass.colorAttachmentCount = 1;
 		subpass.pColorAttachments = &colorAttachmentRef;
+		subpass.pDepthStencilAttachment = &depthAttachmentRef;
 
+		VkSubpassDependency dependency{};
+		dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+		dependency.dstSubpass = 0;
+		dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		dependency.srcAccessMask = 0;
+		dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT;
+		dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+
+
+		std::array<VkAttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
 		VkRenderPassCreateInfo renderPassInfo{};
 		renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-		renderPassInfo.attachmentCount = 1;
-		renderPassInfo.pAttachments = &colorAttachment;
+		renderPassInfo.attachmentCount = attachments.size();
+		renderPassInfo.pAttachments = attachments.data();
 		renderPassInfo.subpassCount = 1;
 		renderPassInfo.pSubpasses = &subpass;
-
+		renderPassInfo.dependencyCount = 1;
+		renderPassInfo.pDependencies = &dependency;
 
 		vkCreateRenderPass(device, &renderPassInfo, nullptr, &m_RenderPass);
 
@@ -324,7 +415,7 @@ namespace Rose
 
 		VkGraphicsPipelineCreateInfo pipelineInfo{};
 		pipelineInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-		pipelineInfo.stageCount = 2;
+		pipelineInfo.stageCount = shaderStages.size();
 		pipelineInfo.pStages = shaderStages.data();
 
 		pipelineInfo.pVertexInputState = &vertexInputInfo;
@@ -332,7 +423,7 @@ namespace Rose
 		pipelineInfo.pViewportState = &viewportState;
 		pipelineInfo.pRasterizationState = &rasterizer;
 		pipelineInfo.pMultisampleState = &multisampling;
-		pipelineInfo.pDepthStencilState = nullptr;
+		pipelineInfo.pDepthStencilState = &depthStencil;
 		pipelineInfo.pColorBlendState = &colorBlending;
 		pipelineInfo.pDynamicState = nullptr;
 
@@ -351,22 +442,52 @@ namespace Rose
 	{
 
 		const VkDevice& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
+		std::vector<VkDescriptorSetLayoutBinding> bindings;
 
-		VkDescriptorSetLayoutBinding uboLayoutBinding{};
-		uboLayoutBinding.binding = 0;
-		uboLayoutBinding.descriptorCount = 1;
-		uboLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		uboLayoutBinding.pImmutableSamplers = nullptr;
-		uboLayoutBinding.stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
 
-		VkDescriptorSetLayoutBinding samplerLayoutBinding{};
-		samplerLayoutBinding.binding = 1;
-		samplerLayoutBinding.descriptorCount = 1;
-		samplerLayoutBinding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		samplerLayoutBinding.pImmutableSamplers = nullptr;
-		samplerLayoutBinding.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+		for (auto& resource : m_Resources)
+		{
+			if (resource.UniformBufferSize)
+			{
 
-		std::array<VkDescriptorSetLayoutBinding, 2> bindings = { uboLayoutBinding, samplerLayoutBinding };
+				auto stageFlag = Utils::DeduceShaderStageFromType(resource.Type);
+				for (auto& ubo : resource.ReflectedUBOs)
+				{
+					VkDescriptorSetLayoutBinding binding{};
+
+					binding.binding = ubo.Binding;
+					binding.descriptorCount = 1;
+					binding.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+					binding.pImmutableSamplers = nullptr;
+					binding.stageFlags = stageFlag;
+
+					bindings.push_back(binding);
+				}
+
+			}
+
+			if (resource.ImageBufferSize)
+			{
+				auto stageFlag = Utils::DeduceShaderStageFromType(resource.Type);
+				for (auto& image : resource.ReflectedMembers)
+				{
+					if (image.Type == ShaderMemberType::SampledImage)
+					{
+						VkDescriptorSetLayoutBinding binding{};
+						binding.binding = image.Binding;
+						binding.descriptorCount = 1;
+						binding.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+						binding.pImmutableSamplers = nullptr;
+						binding.stageFlags = stageFlag;
+						bindings.push_back(binding);
+
+					}
+
+				}
+			}
+		}
+
+
 		VkDescriptorSetLayoutCreateInfo layoutInfo{};
 		layoutInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
 		layoutInfo.bindingCount = bindings.size();
@@ -375,72 +496,121 @@ namespace Rose
 		vkCreateDescriptorSetLayout(device, &layoutInfo, nullptr, &m_DescriptorSetLayout);
 	}
 
-	void Shader::CreateUniformBuffer()
+	void Shader::CreateUniformBuffers()
 	{
-
-		VkDeviceSize bufferSize = sizeof(UniformBufferData);
-
-
-		VkBufferCreateInfo bufferInfo{};
-		bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-		bufferInfo.size = bufferSize;
-		bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
-		bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		const auto& VKLogicalDevice = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
-
-		vkCreateBuffer(VKLogicalDevice, &bufferInfo, nullptr, &m_UniformBuffer);
-
-		VkMemoryRequirements memRequirements;
-		vkGetBufferMemoryRequirements(VKLogicalDevice, m_UniformBuffer, &memRequirements);
-
-
-		VkPhysicalDeviceMemoryProperties memProperties;
-		vkGetPhysicalDeviceMemoryProperties(Application::Get().GetContext()->GetPhysicalDevice()->GetDevice(), &memProperties);
-
-		uint32_t memTypeIndex = 0;
-		uint32_t propFilter = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-		for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-			if ((memRequirements.memoryTypeBits & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & propFilter) == propFilter)
+		for (auto& resources : m_Resources)
+		{
+			int i = 0;
+			for (auto& reflectedUBO : resources.ReflectedUBOs)
 			{
-				memTypeIndex = i;
-				break;
+				VkBuffer buffer;
+				VkDeviceMemory deviceMemory;
+
+
+				VkBufferCreateInfo bufferInfo{};
+				bufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+				bufferInfo.size = reflectedUBO.BufferSize;
+				bufferInfo.usage = VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT;
+				bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+				const auto& VKLogicalDevice = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
+
+				vkCreateBuffer(VKLogicalDevice, &bufferInfo, nullptr, &buffer);
+
+
+				VkMemoryRequirements memRequirements;
+				vkGetBufferMemoryRequirements(VKLogicalDevice, buffer, &memRequirements);
+
+
+				VkPhysicalDeviceMemoryProperties memProperties;
+				vkGetPhysicalDeviceMemoryProperties(Application::Get().GetContext()->GetPhysicalDevice()->GetDevice(), &memProperties);
+
+				uint32_t memTypeIndex = 0;
+				uint32_t propFilter = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
+				for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
+					if ((memRequirements.memoryTypeBits & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & propFilter) == propFilter)
+					{
+						memTypeIndex = i;
+						break;
+					}
+				}
+
+				VkMemoryAllocateInfo allocInfo{};
+				allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+				allocInfo.allocationSize = memRequirements.size;
+				allocInfo.memoryTypeIndex = memTypeIndex;
+
+				if (vkAllocateMemory(VKLogicalDevice, &allocInfo, nullptr, &deviceMemory) != VK_SUCCESS)
+					ASSERT();
+
+				vkBindBufferMemory(VKLogicalDevice, buffer, deviceMemory, 0);
+
+				i++;
+
+				m_UniformBuffers.push_back({ buffer, deviceMemory });
 			}
 		}
-
-		VkMemoryAllocateInfo allocInfo{};
-		allocInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-		allocInfo.allocationSize = memRequirements.size;
-		allocInfo.memoryTypeIndex = memTypeIndex;
-
-		if (vkAllocateMemory(VKLogicalDevice, &allocInfo, nullptr, &m_UBDeviceMemory) != VK_SUCCESS)
-			ASSERT();
-
-		vkBindBufferMemory(VKLogicalDevice, m_UniformBuffer, m_UBDeviceMemory, 0);
-	}
-
-	void Shader::UpdateUniformBuffer(UniformBufferData& ubo)
-	{
-		const auto& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
-
-
-		void* data;
-		vkMapMemory(device, m_UBDeviceMemory, 0, sizeof(ubo), 0, &data);
-		memcpy(data, &ubo, sizeof(ubo));
-		vkUnmapMemory(device, m_UBDeviceMemory);
+		
 
 	}
 
-	void Shader::CreateDescriptorPool()
+
+	void Shader::UpdateUniformBuffer(void* data, uint32_t size, uint32_t binding)
+	{
+		const auto& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
+
+		if (binding < 0 || binding > m_UniformBuffers.size())
+		{
+			LOG("Could not update UBO at binding '%d'! It may not exist or is 0!\n");
+			return;
+		}
+		auto& memory = m_UniformBuffers[binding].DeviceMemory;
+
+
+		void* temp;
+		vkMapMemory(device, memory, 0, size, 0, &temp);
+		memcpy(temp, data, size);
+		vkUnmapMemory(device, memory);
+
+	}
+
+	void Shader::CreateDescriptorPool(const std::vector< MaterialUniform>& matUniforms)
 	{
 
 
 		const auto& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 
-		std::array<VkDescriptorPoolSize, 2> poolSizes{};
-		poolSizes[0].type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		poolSizes[0].descriptorCount = 1;
-		poolSizes[1].type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		poolSizes[1].descriptorCount = 1;
+		std::vector<VkDescriptorPoolSize> poolSizes{};
+
+		for (auto& resource : m_Resources)
+		{
+			if (resource.UniformBufferSize)
+			{
+				for (auto& ubo : resource.ReflectedUBOs)
+				{
+					VkDescriptorPoolSize result;
+					result.type = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+					result.descriptorCount = 1;
+
+					poolSizes.push_back(result);
+				}
+			}
+
+			if (resource.ImageBufferSize)
+			{
+				for (auto& image : resource.ReflectedMembers)
+				{
+					if (image.Type == ShaderMemberType::SampledImage)
+					{
+						VkDescriptorPoolSize result;
+						result.type = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+						result.descriptorCount = 1;
+
+						poolSizes.push_back(result);
+					}
+				}
+			}
+
+		}
 
 		VkDescriptorPoolCreateInfo poolInfo{};
 		poolInfo.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -452,7 +622,7 @@ namespace Rose
 		vkCreateDescriptorPool(device, &poolInfo, nullptr, &m_DescriptorPool);
 	}
 
-	void Shader::CreateDescriptorSets()
+	void Shader::CreateDescriptorSets(const std::vector< MaterialUniform>& matUniforms)
 	{
 		const auto& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
 
@@ -465,45 +635,203 @@ namespace Rose
 		VkResult result = vkAllocateDescriptorSets(device, &allocInfo, &m_DescriptorSet);
 
 
-		VkDescriptorBufferInfo bufferInfo{};
-		bufferInfo.buffer = m_UniformBuffer;
-		bufferInfo.offset = 0;
-		bufferInfo.range = sizeof(UniformBufferData);
+		std::vector<VkWriteDescriptorSet> descWrites{};
+		std::vector<VkDescriptorImageInfo> imgInfos{};
 
-		VkDescriptorImageInfo imageInfo{};
-		
-		imageInfo.imageView = Application::Get().GetTexture()->GetImageView();
-		imageInfo.sampler = Application::Get().GetTexture()->GetSampler();
-		imageInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+		for (auto& resource : m_Resources)
+		{
+			if (resource.UniformBufferSize)
+			{
+				
+				for (auto& ubo : resource.ReflectedUBOs)
+				{
+
+					VkDescriptorBufferInfo bufferInfo{};
+
+					bufferInfo.buffer = m_UniformBuffers[ubo.Binding].Buffer;
+					bufferInfo.range = ubo.BufferSize;
+					bufferInfo.offset = 0;
+
+					VkWriteDescriptorSet bufferDescWrite{};
+
+					bufferDescWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+					bufferDescWrite.dstSet = m_DescriptorSet;
+					bufferDescWrite.dstBinding = ubo.Binding;
+					bufferDescWrite.dstArrayElement = 0;
+					bufferDescWrite.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+					bufferDescWrite.descriptorCount = 1;
+					bufferDescWrite.pBufferInfo = &bufferInfo;
+					
+
+					descWrites.push_back(bufferDescWrite);
+				}
+			}
+
+			if (resource.ImageBufferSize)
+			{
+
+				int i = 0;
+				imgInfos.resize(resource.ImageBufferSize);
+
+				for (auto& image : resource.ReflectedMembers)
+				{
+					if (image.Type == ShaderMemberType::SampledImage)
+					{
+
+					
+						if (matUniforms.size())
+						{
+							if (i < matUniforms.size())
+							{
+								imgInfos[i].imageView = matUniforms[i].Texture->GetImageView();
+								imgInfos[i].sampler = matUniforms[i].Texture->GetSampler();
+							}
+							LOG("%d\n", i);
+						}
+						else {
+							imgInfos[i].imageView = Material::DefaultWhiteTexture()->GetImageView();
+							imgInfos[i].sampler = Material::DefaultWhiteTexture()->GetSampler();
+						}
+
+						if (i < matUniforms.size())
+						{
+							imgInfos[i].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+						}
+
+						VkWriteDescriptorSet imageDescWrite{};
+
+						imageDescWrite.sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+						imageDescWrite.dstSet = m_DescriptorSet;
+						imageDescWrite.dstBinding = image.Binding;
+						imageDescWrite.dstArrayElement = 0;
+						imageDescWrite.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+						imageDescWrite.descriptorCount = 1;
+						imageDescWrite.pImageInfo = &imgInfos[i];
+
+						descWrites.push_back(imageDescWrite);
+						i++;
 
 
+					}
+				}
+			}
 
-
-		std::array<VkWriteDescriptorSet, 2> descWrites{};
-
-		descWrites[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descWrites[0].dstSet = m_DescriptorSet;
-		descWrites[0].dstBinding = 0;
-		descWrites[0].dstArrayElement = 0;
-		descWrites[0].descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-		descWrites[0].descriptorCount = 1;
-		descWrites[0].pBufferInfo = &bufferInfo;
-
-		descWrites[1].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-		descWrites[1].dstSet = m_DescriptorSet;
-		descWrites[1].dstBinding = 1;
-		descWrites[1].dstArrayElement = 0;
-		descWrites[1].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-		descWrites[1].descriptorCount = 1;
-		descWrites[1].pImageInfo = &imageInfo;
+		}
 
 
 		vkUpdateDescriptorSets(device, descWrites.size(), descWrites.data(), 0, nullptr);
 
 	}
 
-	void Shader::Reflect()
+	void Shader::CreatePipelineAndDescriptorPool(const std::vector< MaterialUniform>& matUniforms)
 	{
+		CreateDescriptorPool(matUniforms);
+		CreateDescriptorSets(matUniforms);
+
+		CreateShaderStagePipeline();
+
+
+
+		const VkDevice& device = Application::Get().GetContext()->GetLogicalDevice()->GetDevice();
+
+		for (auto&& [type, module] : m_ShaderModules)
+		{
+			vkDestroyShaderModule(device, module, nullptr);
+		}
+
+	}
+
+	void Shader::Reflect(ShaderModuleTypes type, const std::vector<uint32_t>& data, bool logInfo)
+	{
+		spirv_cross::Compiler compiler(data);
+		spirv_cross::ShaderResources resources = compiler.get_shader_resources();
+
+		ShaderResource shaderResource;
+		shaderResource.Name = std::string(m_Name);
+		shaderResource.Type = type;
+		shaderResource.UniformBufferSize = resources.uniform_buffers.size();
+		shaderResource.ImageBufferSize = resources.sampled_images.size();
+
+		for (uint32_t i = 0; i < resources.sampled_images.size(); i++)
+		{
+			auto& image = resources.sampled_images[i];
+
+			
+			ShaderMember member;
+			auto& id = compiler.get_type(image.type_id);
+			member.Name = compiler.get_member_name(image.base_type_id, i).c_str();
+			member.Type = Utils::FromSpirVTypeToShaderMemberType(id);
+
+
+			member.Size = ShaderMember::ShaderTypeToBytes(member.Type);
+			member.Binding = compiler.get_decoration(image.id, spv::Decoration::DecorationBinding);
+			member.Offset = 0;
+
+			shaderResource.ReflectedMembers.push_back(member); // What about general uniforms?
+		}
+
+
+		for (auto& resource : resources.uniform_buffers)
+		{
+
+			ShaderUniformBuffer uniform;
+			auto& id = compiler.get_type(resource.type_id);
+			uniform.BufferSize = compiler.get_declared_struct_size(id);
+			uniform.Binding = compiler.get_decoration(resource.id, spv::Decoration::DecorationBinding);
+			uniform.MemberSize = id.member_types.size();
+
+
+			uint32_t offset = 0;
+			for (int i = 0; i < uniform.MemberSize; i++)
+			{
+
+				ShaderMember member;
+				member.Name = compiler.get_member_name(resource.base_type_id, i).c_str();
+				member.Type = Utils::FromSpirVTypeToShaderMemberType(compiler.get_type(id.member_types[i]));
+
+
+				member.Offset = offset;
+
+				member.Size = ShaderMember::ShaderTypeToBytes(member.Type);
+				offset += member.Size;
+
+				uniform.Members.push_back(member);
+
+			}
+
+			shaderResource.ReflectedUBOs.push_back(uniform);
+
+		}
+
+		if (logInfo)
+		{
+
+			LOG("\n\nShader resource: (%s::%s)\n", shaderResource.Name.c_str(), Utils::FromShaderTypeToString(shaderResource.Type).c_str());
+			LOG("Uniform buffers: (%d)\n", shaderResource.UniformBufferSize);
+			LOG("Image buffers: (%d)\n", shaderResource.ImageBufferSize);
+			LOG("Reflected UBOs: (count: %d)\n", shaderResource.ReflectedUBOs.size());
+			for (auto& ubo : shaderResource.ReflectedUBOs)
+			{
+				LOG("\t--Binding: (%d)\n", ubo.Binding);
+				LOG("\t--Buffer size: (%d)\n", ubo.BufferSize);
+
+
+				LOG("\t--Members: (count %d)\n", ubo.Members.size());
+				for (auto& member : ubo.Members)
+				{
+					LOG("\t\t--Member: %s\n", member.Name.c_str());
+					LOG("\t\t\t--Type: %s\n", Utils::FromShaderMemberTypeToString(member.Type).c_str());
+					LOG("\t\t\t--Size: %d\n", member.Size);
+					LOG("\t\t\t--Offset: %d\n", member.Offset);
+				}
+				LOG("\t---\n",);
+
+			}
+			LOG("---\n", );
+
+		}
+
+		m_Resources.push_back(shaderResource);
 
 	}
 

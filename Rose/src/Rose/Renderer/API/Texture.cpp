@@ -12,7 +12,8 @@ namespace Rose
 
 
 
-	Texture2D::Texture2D(const std::string& filepath)
+	Texture2D::Texture2D(const std::string& filepath, const TextureProperties& props)
+		: m_Props(props)
 	{
 
 		stbi_set_flip_vertically_on_load(1);
@@ -42,17 +43,22 @@ namespace Rose
 		allocator.UnMap(tempAllocation);
 
 
-		m_Image = std::make_shared<Image>(m_Width, m_Height);
+		m_Image = std::make_shared<Image>(m_Width, m_Height, m_Props.IsNormalMap);
 
-		m_Image->TransitionLayout(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
+		VkFormat imgFormat = VK_FORMAT_R8G8B8A8_SRGB;
+		if(m_Props.IsNormalMap)
+			imgFormat = VK_FORMAT_R8G8B8A8_UNORM;
+
+
+		m_Image->TransitionLayout(imgFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 		m_Image->CopyBufferToImage(tempBuffer, m_Width, m_Height);
-		m_Image->TransitionLayout(VK_FORMAT_R8G8B8A8_SRGB, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+		m_Image->TransitionLayout(imgFormat, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
 
 		allocator.Free(tempAllocation, tempBuffer);
 		stbi_image_free(textureBuffer);
 
 
-		m_Image->CreateImageViews(VK_FORMAT_R8G8B8A8_SRGB);
+		m_Image->CreateImageViews(imgFormat);
 		CreateSampler();
 
 
@@ -95,7 +101,7 @@ namespace Rose
 		createInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		createInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
 		createInfo.anisotropyEnable = VK_TRUE;
-		//createInfo.maxAnisotropy = 1.0f;
+		createInfo.maxAnisotropy = 1.0f;
 		createInfo.maxAnisotropy = deviceProps.limits.maxSamplerAnisotropy;
 
 		createInfo.unnormalizedCoordinates = VK_FALSE;

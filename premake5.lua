@@ -34,7 +34,7 @@ group "Core"
 		kind "StaticLib"
 		language "C++"
 		cppdialect "C++17"
-		staticruntime "on"
+		staticruntime "off"
 
 
 		targetdir ("bin/" .. outputDir .. "/%{prj.name}");
@@ -175,7 +175,7 @@ project "SandboxApplication"
 		kind "ConsoleApp"
 		language "C++"
 		cppdialect "C++17"
-		staticruntime "on"
+		staticruntime "off"
 
 
 		targetdir ("bin/" .. outputDir .. "/%{prj.name}");
@@ -205,6 +205,7 @@ project "SandboxApplication"
 			"Rose/src",
 			"Rose/vendor/spdlog/include",
 			"Rose/vendor",
+			"Rose/vendor/assimp/include",
 			"%{IncludeDir.glfw}/include",
 			"%{IncludeDir.imgui}",
 			"%{IncludeDir.glm}",

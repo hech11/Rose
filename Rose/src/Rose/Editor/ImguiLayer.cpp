@@ -93,7 +93,7 @@ namespace Rose
 		init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 		init_info.Allocator = nullptr;
 		init_info.CheckVkResultFn = check_vk_result;
-		ImGui_ImplVulkan_Init(&init_info, Application::Get().GetShader()->GetRenderPass());
+		ImGui_ImplVulkan_Init(&init_info, Application::Get().GetTestModel()->GetMaterials()[0].ShaderData->GetRenderPass());
 
 
 		// Upload Fonts

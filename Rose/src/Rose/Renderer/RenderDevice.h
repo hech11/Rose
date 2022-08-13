@@ -24,6 +24,9 @@ namespace Rose
 			const VkPhysicalDevice& GetDevice() const { return m_PhysicalDevice; } 
 
 
+			VkFormat FindDepthFormat();
+			VkFormat FindSupportedFormats(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+
 		private:
 			VkPhysicalDevice m_PhysicalDevice{};
 			VkPhysicalDeviceProperties m_PhysicalDeviceProps{};
