@@ -14,7 +14,7 @@ namespace Rose
 	{
 
 		public :
-			Image(int width, int height, bool isNormalMap = false, uint32_t mipMapLevel = 1);
+			Image(int width, int height, VkSampleCountFlagBits samples, bool isNormalMap = false, uint32_t mipMapLevel = 1);
 			~Image();
 
 			const VkImage& GetImageBuffer() const { return m_BufferID; }

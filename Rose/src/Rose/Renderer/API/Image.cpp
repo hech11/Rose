@@ -8,7 +8,7 @@ namespace Rose
 {
 
 
-	Image::Image(int width, int height, bool isNormalMap, uint32_t mipMapLevel)
+	Image::Image(int width, int height, VkSampleCountFlagBits samples, bool isNormalMap, uint32_t mipMapLevel)
 	{
 
 		m_IsFreed = false;
@@ -32,7 +32,8 @@ namespace Rose
 		imageInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 		imageInfo.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT;
 		imageInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-		imageInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+		imageInfo.samples = samples;
+
 
 
 		VKMemAllocator allocator;

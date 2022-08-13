@@ -46,6 +46,9 @@ namespace Rose
 			VkImageView& GetDepthImageView() { return m_DepthImageView; }
 			const VkImageView& GetDepthImageView() const { return m_DepthImageView; }
 
+			VkImageView& GetMultisampledColorImageView() { return m_ColorSampledImageView; }
+			const VkImageView& GetMultisampledColorImageView() const { return m_ColorSampledImageView; }
+
 			VkFormat GetColorFormat() { return m_ColorFormat; }
 			VkSurfaceKHR GetWindowSurface() const { return m_WinSurface; }
 
@@ -64,6 +67,12 @@ namespace Rose
 			VkSwapchainKHR m_SwapChain;
 			std::vector<VkImage> m_SwapChainImages;
 			std::vector<VkImageView> m_ImageViews;
+
+			VkImage m_ColorSampledImage;
+			VkImageView m_ColorSampledImageView;
+			VkDeviceMemory m_ColorSampledDeviceMemory;
+
+
 
 			VkImage m_DepthImage;
 			VkImageView m_DepthImageView;

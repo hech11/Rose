@@ -26,12 +26,18 @@ namespace Rose
 
 			VkFormat FindDepthFormat();
 			VkFormat FindSupportedFormats(const std::vector<VkFormat>& candidates, VkImageTiling tiling, VkFormatFeatureFlags features);
+			VkSampleCountFlagBits GetMSAASampleCount() { return m_MSAASamples; }
 
+
+		private :
+			VkSampleCountFlagBits GetMaxMSAASampleCount();
 		private:
 			VkPhysicalDevice m_PhysicalDevice{};
 			VkPhysicalDeviceProperties m_PhysicalDeviceProps{};
 			VkPhysicalDeviceFeatures m_PhysicalDeviceFeatures{};
 			VkPhysicalDeviceMemoryProperties m_PhysicalMemProps{};
+
+			VkSampleCountFlagBits m_MSAASamples = VK_SAMPLE_COUNT_1_BIT;
 
 			std::vector<VkDeviceQueueCreateInfo> m_DeviceQueueInfos;
 

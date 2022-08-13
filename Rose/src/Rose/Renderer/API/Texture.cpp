@@ -51,7 +51,7 @@ namespace Rose
 			imgFormat = VK_FORMAT_R8G8B8A8_UNORM;
 
 
-		m_Image = std::make_shared<Image>(m_Width, m_Height, m_Props.IsNormalMap, m_MipLevel);
+		m_Image = std::make_shared<Image>(m_Width, m_Height, VK_SAMPLE_COUNT_1_BIT, m_Props.IsNormalMap, m_MipLevel);
 
 
 		m_Image->TransitionLayout(imgFormat, VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);

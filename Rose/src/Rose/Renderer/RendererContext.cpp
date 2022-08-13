@@ -142,6 +142,7 @@ namespace Rose
 		enabledFeatures.fillModeNonSolid = true;
 		enabledFeatures.independentBlend = true;
 		enabledFeatures.pipelineStatisticsQuery = true;
+		enabledFeatures.sampleRateShading = true;
 		m_LogicalDevice = std::make_shared<LogicalRenderingDevice>(m_PhysicalDevice, enabledFeatures);
 
 
