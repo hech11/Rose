@@ -39,6 +39,7 @@ namespace Rose
 
 		VKMemAllocator::Init();
 		m_TestModel = std::make_shared<Model>("assets/models/sponza/sponza.gltf");
+		//m_TestModel = std::make_shared<Model>("assets/models/sphere.fbx");
 		m_SphereModel = std::make_shared<Model>("assets/models/sphere.fbx");
 		//m_TestModel = std::make_shared<Model>("assets/models/coneandsphere.obj");
 
@@ -218,9 +219,10 @@ namespace Rose
 		m_Framebuffers.resize(m_SwapChain->GetImageViews().size());
 
 		for (size_t i = 0; i < m_SwapChain->GetImageViews().size(); i++) {
-			std::array<VkImageView,2> attachments = {
+			std::array<VkImageView,3> attachments = {
+				m_SwapChain->GetMultisampledColorImageView(),
+				m_SwapChain->GetDepthImageView(),
 				m_SwapChain->GetImageViews()[i],
-				m_SwapChain->GetDepthImageView()
 			};
 
 			VkFramebufferCreateInfo framebufferInfo{};
@@ -309,6 +311,7 @@ namespace Rose
 		renderPassInfo.framebuffer = m_Framebuffers[imageIndex];
 		renderPassInfo.renderArea.offset = { 0, 0 };
 		renderPassInfo.renderArea.extent = m_SwapChain->GetExtent2D();
+
 
 		std::array<VkClearValue, 2> clearValues{};
 		clearValues[0].color = { {0.5f, 0.1f, 0.1f, 1.0f} };

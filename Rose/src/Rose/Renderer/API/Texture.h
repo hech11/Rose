@@ -31,9 +31,12 @@ namespace Rose
 
 		private :
 			void CreateSampler();
+			void GenerateMips(VkFormat imageFormat);
+
 
 		private :
 			int32_t m_Width, m_Height, m_BPP;
+			uint32_t m_MipLevel;
 
 			TextureProperties m_Props;
 

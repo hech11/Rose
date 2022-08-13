@@ -90,7 +90,7 @@ namespace Rose
 		init_info.Subpass = 0;
 		init_info.MinImageCount = 2;
 		init_info.ImageCount = Application::Get().GetSwapChain()->GetImageViews().size();
-		init_info.MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+		init_info.MSAASamples = context->GetPhysicalDevice()->GetMSAASampleCount();
 		init_info.Allocator = nullptr;
 		init_info.CheckVkResultFn = check_vk_result;
 		ImGui_ImplVulkan_Init(&init_info, Application::Get().GetTestModel()->GetMaterials()[0].ShaderData->GetRenderPass());
