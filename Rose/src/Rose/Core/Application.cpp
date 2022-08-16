@@ -38,10 +38,82 @@ namespace Rose
 		CreateVulkanInstance();
 
 		VKMemAllocator::Init();
-		m_TestModel = std::make_shared<Model>("assets/models/sponza/sponza.gltf");
-		//m_TestModel = std::make_shared<Model>("assets/models/sphere.fbx");
+		//m_TestModel = std::make_shared<Model>("assets/models/sponza/sponza.gltf");
+		m_TestModel = std::make_shared<Model>("assets/models/sphere.fbx");
 		m_SphereModel = std::make_shared<Model>("assets/models/sphere.fbx");
 		//m_TestModel = std::make_shared<Model>("assets/models/coneandsphere.obj");
+
+
+
+		float skyboxVerts[] =
+		{
+			// back face
+			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f,
+			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f,
+			 1.0f, -1.0f, -1.0f,  0.0f,  0.0f,
+			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f,
+			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f,
+			-1.0f,  1.0f, -1.0f,  0.0f,  0.0f,
+			// front face
+			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,
+			 1.0f, -1.0f,  1.0f,  0.0f,  0.0f,
+			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,
+			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,
+			-1.0f,  1.0f,  1.0f,  0.0f,  0.0f,
+			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,
+			// left face
+			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,
+			-1.0f,  1.0f, -1.0f, -1.0f,  0.0f,
+			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,
+			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,
+			-1.0f, -1.0f,  1.0f, -1.0f,  0.0f,
+			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,
+			// right face
+			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,
+			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,
+			 1.0f,  1.0f, -1.0f,  1.0f,  0.0f,
+			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,
+			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,
+			 1.0f, -1.0f,  1.0f,  1.0f,  0.0f,
+			 // bottom face
+			 -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,
+			  1.0f, -1.0f, -1.0f,  0.0f, -1.0f,
+			  1.0f, -1.0f,  1.0f,  0.0f, -1.0f,
+			  1.0f, -1.0f,  1.0f,  0.0f, -1.0f,
+			 -1.0f, -1.0f,  1.0f,  0.0f, -1.0f,
+			 -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,
+			 // top face
+			 -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,
+			  1.0f,  1.0f , 1.0f,  0.0f,  1.0f,
+			  1.0f,  1.0f, -1.0f,  0.0f,  1.0f,
+			  1.0f,  1.0f,  1.0f,  0.0f,  1.0f,
+			 -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,
+			 -1.0f,  1.0f,  1.0f,  0.0f,  1.0f,
+		};
+
+
+
+		ShaderAttributeLayout layout =
+		{
+			{"a_Position", 0, ShaderMemberType::Float3},
+			{"a_TexCoord", 1, ShaderMemberType::Float2}
+		};
+
+
+		m_SkyboxShader = std::make_shared<Shader>("assets/shaders/skybox.shader", layout, true);
+
+		MaterialUniform diffuseUniform;
+
+
+		diffuseUniform.Texture = std::make_shared<Texture2D>("assets/textures/lago_disola_4k.hdr");
+		diffuseUniform.TextureType = PBRTextureType::Albedo;
+		m_SkyboxUniforms.push_back(diffuseUniform);
+
+		m_SkyboxShader->CreatePipelineAndDescriptorPool(m_SkyboxUniforms);
+		
+		m_SkyboxVbo = std::make_shared<VertexBuffer>(skyboxVerts, sizeof(skyboxVerts));
+		//m_SkyboxIbo = std::make_shared<IndexBuffer>(indicies, sizeof(indicies));
+
 
 
 		CreateGraphicsPipeline();
@@ -99,6 +171,8 @@ namespace Rose
 				mat.ShaderData->UpdateUniformBuffer(&ubo, sizeof(ubo), 0);
 			}
 
+
+			m_SkyboxShader->UpdateUniformBuffer(&ubo, sizeof(ubo), 0);
 			DrawOntoScreen();
 
 		}
@@ -356,6 +430,23 @@ namespace Rose
 			vkCmdDrawIndexed(m_VKCommandBuffer, m_SphereModel->GetMeshes()[i].Indicies.size(), 1, 0, 0, 0);
 
 		}
+
+		{
+			VkBuffer vbos[] = { m_SkyboxVbo->GetBufferID() };
+			VkDeviceSize offset[] = { 0 };
+
+			const auto& shader = m_SkyboxShader;
+
+			vkCmdBindPipeline(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetGrahpicsPipeline());
+
+			vkCmdBindVertexBuffers(m_VKCommandBuffer, 0, 1, vbos, offset);
+		//	vkCmdBindIndexBuffer(m_VKCommandBuffer, m_SkyboxIbo->GetBufferID(), 0, VK_INDEX_TYPE_UINT32);
+
+			vkCmdBindDescriptorSets(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetPipelineLayout(), 0, 1, &shader->GetDescriptorSet(), 0, nullptr);
+			vkCmdDraw(m_VKCommandBuffer, 36, 1, 0, 0);
+		}
+
+
 		OnImguiRender();
 		m_ImguiLayer->End();
 
@@ -396,6 +487,17 @@ namespace Rose
 			ibo->FreeMemory();
 		}
 
+		for (auto& vbo : m_SphereVbo)
+		{
+			vbo->FreeMemory();
+		}
+		for (auto& ibo : m_SphereIbo)
+		{
+			ibo->FreeMemory();
+		}
+
+		m_SkyboxVbo->FreeMemory();
+		//m_SkyboxIbo->FreeMemory();
 
 
 
@@ -408,6 +510,8 @@ namespace Rose
 
 		m_ImguiLayer->Shutdown();
 		m_TestModel->CleanUp();
+
+		m_SkyboxShader->DestroyPipeline();
 		VKMemAllocator::Shutdown();
 
 		m_RenderingContext->GetLogicalDevice()->Shutdown();

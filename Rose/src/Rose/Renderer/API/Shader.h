@@ -186,7 +186,7 @@ namespace Rose
 	{
 
 		public :
-			Shader(const std::string& filepath, const ShaderAttributeLayout& layout);
+			Shader(const std::string& filepath, const ShaderAttributeLayout& layout, bool isSkybox = false);
 			~Shader();
 
 			void DestroyPipeline();
@@ -250,7 +250,7 @@ namespace Rose
 			VkDescriptorSet m_DescriptorSet;
 
 			ShaderAttributeLayout m_AttributeLayout;
-
+			bool m_IsSkybox = false; // TODO: Proper graphics pipelines needed!
 
 	};
 

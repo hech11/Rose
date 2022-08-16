@@ -5,6 +5,12 @@
 namespace Rose
 {
 
+	struct VKMemAllocations
+	{
+		uint32_t BufferAllocs = 0;
+		uint32_t ImageAllocs = 0;
+	};
+
 	class VKMemAllocator
 	{
 
@@ -20,7 +26,7 @@ namespace Rose
 			void Map(VmaAllocation allocation, void** data);
 			void UnMap(VmaAllocation allocation);
 
-			void Free(VmaAllocation allocation, VkBuffer buffer);
+			void Free(VmaAllocation allocation, VkBuffer& buffer);
 			void Free(VmaAllocation allocation, VkImage image);
 
 
@@ -28,7 +34,7 @@ namespace Rose
 
 
 		private :
-			static uint32_t s_Allocations; //TODO: IMPROVE THIS!
+			static VKMemAllocations s_Allocations;
 			static VmaAllocator s_Allocator;
 	};
 

@@ -116,6 +116,11 @@ namespace Rose
 			std::vector<std::shared_ptr<Rose::VertexBuffer>> m_SphereVbo;
 			std::vector<std::shared_ptr<Rose::IndexBuffer>> m_SphereIbo;
 
+			std::shared_ptr<Rose::VertexBuffer> m_SkyboxVbo;
+			std::shared_ptr<Rose::IndexBuffer> m_SkyboxIbo;
+			std::shared_ptr<Rose::Shader> m_SkyboxShader;
+			std::vector<MaterialUniform> m_SkyboxUniforms;
+
 
 			std::shared_ptr<Rose::PerspectiveCameraController> m_Camera;
 

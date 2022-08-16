@@ -265,7 +265,7 @@ void main()
 
 	DirectionLight dirLight;
 	dirLight.Direction = vec3(0.5f, 1.0f, 0.5f);
-	dirLight.Radience = vec3(245.0f/ 256.0f, 66.0f / 256.0f, 90.0f / 256.0f)*2.5f;
+	dirLight.Radience = vec3(255.0f/ 256.0f, 254.0f / 256.0f, 230.0f / 256.0f)*2.5f;
 
 	PointLight light1;
 	light1.Position = vec3(0.0f, 60.0f, 0.0f);
