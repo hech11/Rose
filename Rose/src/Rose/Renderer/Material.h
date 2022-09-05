@@ -10,12 +10,13 @@ namespace Rose
 
 	enum class PBRTextureType
 	{
-		Albedo, Specular, Normal
+		Albedo, Specular, Normal, Irr, SpecBRDF, Rad
 	};
 
 	struct MaterialUniform // We may not need this as we could put uniforms into its own UBO instead unless its a sampler.
 	{
 		std::shared_ptr<Texture2D> Texture;
+		std::shared_ptr<TextureCube> Texture3DCube;
 		PBRTextureType TextureType;
 	};
 	struct Material

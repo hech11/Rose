@@ -286,7 +286,7 @@ namespace Rose
 		rasterizer.polygonMode = VK_POLYGON_MODE_FILL;
 		rasterizer.lineWidth = 1.0f;
 		if (m_IsSkybox)
-			rasterizer.cullMode = VK_CULL_MODE_FRONT_BIT;
+			rasterizer.cullMode = VK_CULL_MODE_NONE;
 		else
 			rasterizer.cullMode = VK_CULL_MODE_BACK_BIT;
 
@@ -696,14 +696,22 @@ namespace Rose
 				{
 					if (image.Type == ShaderMemberType::SampledImage)
 					{
-
 					
 						if (matUniforms.size())
 						{
 							if (i < matUniforms.size())
 							{
-								imgInfos[i].imageView = matUniforms[i].Texture->GetImageView();
-								imgInfos[i].sampler = matUniforms[i].Texture->GetSampler();
+								if (matUniforms[i].TextureType == PBRTextureType::Irr || matUniforms[i].TextureType == PBRTextureType::Rad)
+								{
+									imgInfos[i].imageView = matUniforms[i].Texture3DCube->GetImageView();
+									imgInfos[i].sampler = matUniforms[i].Texture3DCube->GetSampler();
+									imgInfos[i].imageLayout = VK_IMAGE_LAYOUT_GENERAL;
+								}
+								else
+								{
+									imgInfos[i].imageView = matUniforms[i].Texture->GetImageView();
+									imgInfos[i].sampler = matUniforms[i].Texture->GetSampler();
+								}
 							}
 							LOG("%d\n", i);
 						}
@@ -788,7 +796,11 @@ namespace Rose
 
 			shaderResource.ReflectedMembers.push_back(member); // What about general uniforms?
 		}
+		std::sort(shaderResource.ReflectedMembers.begin(), shaderResource.ReflectedMembers.end(), [&](ShaderMember mem1, ShaderMember mem2)
+			{
 
+				return mem1.Binding < mem2.Binding;
+			});
 
 		for (auto& resource : resources.uniform_buffers)
 		{

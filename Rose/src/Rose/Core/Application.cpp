@@ -38,9 +38,9 @@ namespace Rose
 		CreateVulkanInstance();
 
 		VKMemAllocator::Init();
-		//m_TestModel = std::make_shared<Model>("assets/models/sponza/sponza.gltf");
-		m_TestModel = std::make_shared<Model>("assets/models/sphere.fbx");
-		m_SphereModel = std::make_shared<Model>("assets/models/sphere.fbx");
+		m_TestModel = std::make_shared<Model>("assets/models/sponza/sponza.gltf");
+		//m_TestModel = std::make_shared<Model>("assets/models/sphere.fbx");
+		m_SphereModel = std::make_shared<Model>("assets/models/New/Sphere.fbx");
 		//m_TestModel = std::make_shared<Model>("assets/models/coneandsphere.obj");
 
 
@@ -48,55 +48,85 @@ namespace Rose
 		float skyboxVerts[] =
 		{
 			// back face
-			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f,
-			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f,
-			 1.0f, -1.0f, -1.0f,  0.0f,  0.0f,
-			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f,
-			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f,
-			-1.0f,  1.0f, -1.0f,  0.0f,  0.0f,
-			// front face
-			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,
-			 1.0f, -1.0f,  1.0f,  0.0f,  0.0f,
-			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,
-			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,
-			-1.0f,  1.0f,  1.0f,  0.0f,  0.0f,
-			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,
-			// left face
-			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,
-			-1.0f,  1.0f, -1.0f, -1.0f,  0.0f,
-			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,
-			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,
-			-1.0f, -1.0f,  1.0f, -1.0f,  0.0f,
-			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,
-			// right face
-			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,
-			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,
-			 1.0f,  1.0f, -1.0f,  1.0f,  0.0f,
-			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,
-			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,
-			 1.0f, -1.0f,  1.0f,  1.0f,  0.0f,
-			 // bottom face
-			 -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,
-			  1.0f, -1.0f, -1.0f,  0.0f, -1.0f,
-			  1.0f, -1.0f,  1.0f,  0.0f, -1.0f,
-			  1.0f, -1.0f,  1.0f,  0.0f, -1.0f,
-			 -1.0f, -1.0f,  1.0f,  0.0f, -1.0f,
-			 -1.0f, -1.0f, -1.0f,  0.0f, -1.0f,
-			 // top face
-			 -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,
-			  1.0f,  1.0f , 1.0f,  0.0f,  1.0f,
-			  1.0f,  1.0f, -1.0f,  0.0f,  1.0f,
-			  1.0f,  1.0f,  1.0f,  0.0f,  1.0f,
-			 -1.0f,  1.0f, -1.0f,  0.0f,  1.0f,
-			 -1.0f,  1.0f,  1.0f,  0.0f,  1.0f,
+			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f,  -1.0f,
+			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f,  -1.0f,
+			 1.0f, -1.0f, -1.0f,  0.0f,  0.0f,  -1.0f,
+			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f,  -1.0f,
+			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f,  -1.0f,
+			-1.0f,  1.0f, -1.0f,  0.0f,  0.0f,  -1.0f,
+			// front face		  
+			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
+			 1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
+			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
+			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
+			-1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
+			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
+			// left face		  
+			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f,
+			-1.0f,  1.0f, -1.0f, -1.0f,  0.0f,  0.0f,
+			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f,
+			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f,
+			-1.0f, -1.0f,  1.0f, -1.0f,  0.0f,  0.0f,
+			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f,
+			// right face					 
+			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f,
+			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,
+			 1.0f,  1.0f, -1.0f,  1.0f,  0.0f,  0.0f,
+			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,
+			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f,
+			 1.0f, -1.0f,  1.0f,  1.0f,  0.0f,  0.0f,
+			 // bottom face					    
+			 -1.0f, -1.0f, -1.0f,  0.0f, -1.0f, 0.0f,
+			  1.0f, -1.0f, -1.0f,  0.0f, -1.0f, 0.0f,
+			  1.0f, -1.0f,  1.0f,  0.0f, -1.0f, 0.0f,
+			  1.0f, -1.0f,  1.0f,  0.0f, -1.0f, 0.0f,
+			 -1.0f, -1.0f,  1.0f,  0.0f, -1.0f, 0.0f,
+			 -1.0f, -1.0f, -1.0f,  0.0f, -1.0f, 0.0f,
+			 // top face					    
+			 -1.0f,  1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+			  1.0f,  1.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+			  1.0f,  1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+			  1.0f,  1.0f,  1.0f,  0.0f,  1.0f, 0.0f,
+			 -1.0f,  1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
+			 -1.0f,  1.0f,  1.0f,  0.0f,  1.0f, 0.0f
 		};
 
+		float skyboxV[] =
+		{
+			-1.0f, -1.0f,  1.0f,
+			 1.0f, -1.0f,  1.0f,
+			 1.0f, -1.0f, -1.0f,
+			-1.0f, -1.0f, -1.0f,
+			-1.0f,  1.0f,  1.0f,
+			 1.0f,  1.0f,  1.0f,
+			 1.0f,  1.0f, -1.0f,
+			-1.0f,  1.0f, -1.0f,
+		};
 
+		uint32_t skyboxI[] =
+		{
+			1,2,6,
+			6,5,1,
+
+			0,4,7,
+			7,3,0,
+
+			4,5,6,
+			6,7,4,
+
+			0,3,2,
+			2,1,0,
+			
+			0,1,5,
+			5,4,0,
+
+			3,7,6,
+			6,2,3
+		};
 
 		ShaderAttributeLayout layout =
 		{
-			{"a_Position", 0, ShaderMemberType::Float3},
-			{"a_TexCoord", 1, ShaderMemberType::Float2}
+			{"a_Position", 0, ShaderMemberType::Float3}
 		};
 
 
@@ -105,14 +135,35 @@ namespace Rose
 		MaterialUniform diffuseUniform;
 
 
-		diffuseUniform.Texture = std::make_shared<Texture2D>("assets/textures/lago_disola_4k.hdr");
-		diffuseUniform.TextureType = PBRTextureType::Albedo;
+
+
+// 		TextureCubeFiles files =
+// 		{
+// 			{std::string("assets/textures/skybox/sky1/SDR/output_skybox_posx.tga")},
+// 			{std::string("assets/textures/skybox/sky1/SDR/output_skybox_negx.tga")},
+// 			{std::string("assets/textures/skybox/sky1/SDR/output_skybox_posy.tga")},
+// 			{std::string("assets/textures/skybox/sky1/SDR/output_skybox_negy.tga")},
+// 			{std::string("assets/textures/skybox/sky1/SDR/output_skybox_posz.tga")},
+// 			{std::string("assets/textures/skybox/sky1/SDR/output_skybox_negz.tga")}
+// 		};
+
+		TextureCubeFiles files =
+		{
+			{std::string("assets/textures/skybox/sky1/output_skybox_posx.hdr")},
+			{std::string("assets/textures/skybox/sky1/output_skybox_negx.hdr")},
+			{std::string("assets/textures/skybox/sky1/output_skybox_posy.hdr")},
+			{std::string("assets/textures/skybox/sky1/output_skybox_negy.hdr")},
+			{std::string("assets/textures/skybox/sky1/output_skybox_posz.hdr")},
+			{std::string("assets/textures/skybox/sky1/output_skybox_negz.hdr")}
+		};
+		diffuseUniform.Texture3DCube = std::make_shared<TextureCube>(files);
+		diffuseUniform.TextureType = PBRTextureType::Rad;
 		m_SkyboxUniforms.push_back(diffuseUniform);
 
 		m_SkyboxShader->CreatePipelineAndDescriptorPool(m_SkyboxUniforms);
 		
-		m_SkyboxVbo = std::make_shared<VertexBuffer>(skyboxVerts, sizeof(skyboxVerts));
-		//m_SkyboxIbo = std::make_shared<IndexBuffer>(indicies, sizeof(indicies));
+		m_SkyboxVbo = std::make_shared<VertexBuffer>(skyboxV, sizeof(skyboxV));
+		m_SkyboxIbo = std::make_shared<IndexBuffer>(skyboxI, sizeof(skyboxI));
 
 
 
@@ -396,6 +447,23 @@ namespace Rose
 
 		vkCmdBeginRenderPass(m_VKCommandBuffer, &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
+		{
+			VkBuffer vbos[] = { m_SkyboxVbo->GetBufferID() };
+			VkDeviceSize offset[] = { 0 };
+
+			const auto& shader = m_SkyboxShader;
+
+			vkCmdBindPipeline(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetGrahpicsPipeline());
+
+			vkCmdBindVertexBuffers(m_VKCommandBuffer, 0, 1, vbos, offset);
+			vkCmdBindIndexBuffer(m_VKCommandBuffer, m_SkyboxIbo->GetBufferID(), 0, VK_INDEX_TYPE_UINT32);
+
+			vkCmdBindDescriptorSets(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetPipelineLayout(), 0, 1, &shader->GetDescriptorSet(), 0, nullptr);
+			vkCmdDrawIndexed(m_VKCommandBuffer, 36, 1, 0, 0, 0);
+			//vkCmdDraw(m_VKCommandBuffer, 36, 1, 0, 0);
+		}
+
+
 		for (int i = 0; i < m_VBOs.size(); i++)
 		{
 
@@ -431,21 +499,7 @@ namespace Rose
 
 		}
 
-		{
-			VkBuffer vbos[] = { m_SkyboxVbo->GetBufferID() };
-			VkDeviceSize offset[] = { 0 };
-
-			const auto& shader = m_SkyboxShader;
-
-			vkCmdBindPipeline(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetGrahpicsPipeline());
-
-			vkCmdBindVertexBuffers(m_VKCommandBuffer, 0, 1, vbos, offset);
-		//	vkCmdBindIndexBuffer(m_VKCommandBuffer, m_SkyboxIbo->GetBufferID(), 0, VK_INDEX_TYPE_UINT32);
-
-			vkCmdBindDescriptorSets(m_VKCommandBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, shader->GetPipelineLayout(), 0, 1, &shader->GetDescriptorSet(), 0, nullptr);
-			vkCmdDraw(m_VKCommandBuffer, 36, 1, 0, 0);
-		}
-
+		
 
 		OnImguiRender();
 		m_ImguiLayer->End();

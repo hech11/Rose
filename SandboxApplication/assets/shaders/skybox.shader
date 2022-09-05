@@ -3,7 +3,6 @@
 
 
 layout(location = 0) in vec3 a_Position;
-layout(location = 1) in vec2 a_TexCoord;
 
 layout(binding = 0) uniform BufferObject
 {
@@ -17,7 +16,7 @@ layout(binding = 0) uniform BufferObject
 struct VertexOutput
 {
 	vec3 LocalPosition;
-	vec2 TexCoord;
+	vec3 TexCoord;
 };
 
 layout(location = 0) out VertexOutput v_Output;
@@ -31,13 +30,14 @@ void main()
 	gl_Position = worldPos.xyww;
 
 	v_Output.LocalPosition = a_Position;
-	v_Output.TexCoord = a_TexCoord;
+	v_Output.TexCoord = vec3(a_Position.x, a_Position.y, -a_Position.z);
 }
 
 #type pixel
 #version 450
 
-layout(set = 0, binding = 1) uniform sampler2D u_AlbedoMap;
+layout(set = 0, binding = 1) uniform samplerCube u_AlbedoMap;
+
 layout(location = 0) out vec4 fragColor;
 
 
@@ -45,7 +45,7 @@ layout(location = 0) out vec4 fragColor;
 struct VertexOutput
 {
 	vec3 LocalPosition;
-	vec2 TexCoord;
+	vec3 TexCoord;
 };
 
 layout(location = 0) in VertexOutput v_Input;
@@ -66,9 +66,9 @@ vec2 SampleSphericalMap(vec3 v)
 void main()
 {
 
-	vec2 uv = SampleSphericalMap(normalize(v_Input.LocalPosition));
+	//vec2 uv = SampleSphericalMap(normalize(v_Input.LocalPosition));
 
-	vec3 color = texture(u_AlbedoMap, uv).rgb;
+	vec3 color = texture(u_AlbedoMap, v_Input.TexCoord).rgb;
 	//vec3 albedo = texture(u_AlbedoMap, uv).rgb;
 
 

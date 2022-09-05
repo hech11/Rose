@@ -1,11 +1,11 @@
 #type vertex
-#version 450
+#version 450 core
 
 
 layout(location = 0) in vec3 a_Position;
 layout(location = 1) in vec3 a_Normal;
 layout(location = 2) in vec3 a_Tangent;
-layout(location = 3) in vec3 a_Bitangent;
+layout(location = 3) in vec3 a_Binormal;
 layout(location = 4) in vec2 a_TexCoord;
 
 
@@ -15,14 +15,13 @@ struct VertexOutput
 	vec3 Normal;
 	vec2 TexCoord;
 	vec3 Tangent;
-	vec3 Bitangent;
+	vec3 Binormal;
 	mat3 WorldNormals;
 	mat3 WorldTransform;
 
 	mat3 CameraView;
 	vec3 ViewPosition;
 
-	mat4 Model;
 };
 
 layout(location = 0) out VertexOutput v_Output;
@@ -39,40 +38,48 @@ layout(binding = 0) uniform BufferObject
 
 void main()
 {
-	vec4 worldPos = ubo.Model * vec4(a_Position, 1.0);
+	mat4 transform = ubo.Model;
+
+
+	vec4 worldPos = vec4(a_Position, 1.0);
+
 	v_Output.WorldPosition = worldPos.xyz;
-	v_Output.Normal = mat3(ubo.Model) * a_Normal;
+	v_Output.Normal = mat3(transform) * a_Normal;
+
 	v_Output.TexCoord = a_TexCoord;
 	v_Output.Tangent = a_Tangent;
-	v_Output.Bitangent = a_Bitangent;
+	
+	mat3 nMatrix = mat3(ubo.Model);
 
-
-	v_Output.Model = ubo.Model;
-
-	mat3 nMatrix = transpose(inverse(mat3(ubo.Model)));
-
-	vec3 T = normalize(nMatrix * a_Bitangent.xyz);
+	vec3 T = normalize(nMatrix * a_Tangent.xyz);
 	vec3 N = normalize(nMatrix * a_Normal.xyz);
+	vec3 B = normalize(cross(N, T) * 1.0f);
 
-	vec3 B = normalize(cross(N, T)* 1.0f);
 
-	v_Output.WorldNormals = mat3(T, B, N);
-	v_Output.WorldTransform = mat3(ubo.Model);
+	v_Output.WorldTransform = mat3(transform);
+	v_Output.WorldNormals = mat3(transform) * mat3(a_Tangent, a_Binormal, a_Normal);
+
 	v_Output.CameraView = mat3(ubo.View);
 
 
+	//mat3 inverseView = ubo.View;
+
+	//vec3 pos = vec3(inverseView[0][3], inverseView[1][3], inverseView[2][3]);
+	//v_Output.ViewPosition = inverseView* v_Output.WorldPosition;
 	v_Output.ViewPosition = vec3(ubo.View * vec4(v_Output.WorldPosition, 1.0f));
 
 	gl_Position = ubo.ViewProj * worldPos;
 }
 
 #type pixel
-#version 450
+#version 450 core
 
 
 layout(set = 0, binding = 1) uniform sampler2D u_AlbedoMap;
 layout(set = 0, binding = 2) uniform sampler2D u_NormalMap;
-
+layout(set = 0, binding = 3) uniform samplerCube u_IrradienceMap;
+layout(set = 0, binding = 4) uniform samplerCube u_RadienceMap;
+layout(set = 0, binding = 5) uniform sampler2D u_SpecularBRDFLUTTexture;
 
 
 
@@ -96,15 +103,13 @@ struct VertexOutput
 	vec3 Normal;
 	vec2 TexCoord;
 	vec3 Tangent;
-	vec3 Bitangent;
+	vec3 Binormal;
 
 	mat3 WorldNormals;
 	mat3 WorldTransform;
 
 	mat3 CameraView;
 	vec3 ViewPosition;
-
-	mat4 Model;
 
 };
 layout(location = 0) in VertexOutput v_Input;
@@ -128,6 +133,20 @@ float DistributionGGX(vec3 N, vec3 H, float roughness)
 
 	return num / denom;
 }
+
+float GaSchlick1(float cosTheta, float k)
+{
+	return cosTheta / (cosTheta * (1.0 - k) + k);
+}
+
+float GaSchlickGGX(float cosLi, float NdotV, float roughness)
+{
+	float r = roughness + 1.0;
+	float k = (r * r) / 8.0;
+	return GaSchlick1(cosLi, k) * GaSchlick1(NdotV, k);
+}
+
+
 float GeometrySchlickGGX(float NdotV, float roughness)
 {
 	float r = (roughness + 1.0);
@@ -147,115 +166,165 @@ float GeometrySmith(vec3 N, vec3 V, vec3 L, float roughness)
 
 	return ggx1 * ggx2;
 }
-vec3 fresnelSchlick(float cosTheta, vec3 F0)
+
+float NdfGGX(float cosLh, float roughness)
 {
-	return F0 + (1.0 - F0) * pow(clamp(1.0 - cosTheta, 0.0, 1.0), 5.0);
+	float alpha = roughness * roughness;
+	float alphaSq = alpha * alpha;
+
+	float denom = (cosLh * cosLh) * (alphaSq - 1.0) + 1.0;
+	return alphaSq / (PI * denom * denom);
+}
+
+vec3 fresnelSchlickRough(vec3 F0, float cosTheta, float roughness)
+{
+	return F0 + (max(vec3(1.0 - roughness), F0) - F0) * pow(1.0 - cosTheta, 5.0);
 }
 
 
 vec3 NormalMap()
 {
-	vec3 tangentNormal = texture(u_NormalMap, v_Input.TexCoord).xyz * 2.0 - 1.0;
+	vec3 tangentNormal = normalize(v_Input.Normal);
+	tangentNormal = normalize(texture(u_NormalMap, v_Input.TexCoord).xyz * 2.0 - 1.0);
 	return normalize(v_Input.WorldNormals * tangentNormal);
 }
 
 
 vec3 CalcDirectionLight(DirectionLight light, vec3 F0, vec3 albedo, vec3 N, float metallic, float roughness, float ao, vec3 worldPos)
 {
+	vec3 view = normalize(v_Input.ViewPosition - v_Input.WorldPosition);
+	float NdotV = max(dot(N, view), 0.0);
 
 	vec3 LightColor = light.Radience;
 
 	vec3 WorldPos = worldPos;
+	vec3 Direction = light.Direction;
 
-	vec3 V = normalize(v_Input.ViewPosition - worldPos);
-
-
-	vec3 Lo = vec3(0.0f);
-
-	vec3 L = light.Direction;
-
-	float cosTheta = max(dot(N, L), 0.0);
-	vec3 H = normalize(V + L);
+	vec3 L = Direction;
+	vec3 Lh = normalize(L + view);
 
 
-	vec3 radiance = LightColor * cosTheta;
+	vec3 radiance = LightColor;
 
 
-	vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+	float cosLi = max(0.0, dot(N, L));
+	float cosLh = max(0.0, dot(N, Lh));
 
 
-	float NDF = DistributionGGX(N, H, roughness);
-	float G = GeometrySmith(N, V, L, roughness);
-	vec3 numerator = NDF * G * F;
-	float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
-	vec3 specular = numerator / denominator;
+	vec3 F = fresnelSchlickRough(F0, max(0.0, dot(Lh, view)), roughness);
+	float D = NdfGGX(cosLh, roughness);
+	float G = GaSchlickGGX(cosLi, NdotV, roughness);
 
-	vec3 kS = F;
-	vec3 kD = vec3(1.0) - kS;
-	kD *= 1.0 - metallic;
+	vec3 kD = (1.0 - F) * (1.0 - metallic);
 
-	float NdotL = max(dot(N, L), 0.0);
-	Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+	vec3 result = vec3(0.0f);
+	vec3 diffuse = kD * albedo;
 
-	return Lo;
+	vec3 spec = (F * D * G) / max(0.00001, 4.0f * cosLi * NdotV);
+	spec = clamp(spec, vec3(0.0f), vec3(10.0f));
+
+
+	result = (diffuse + spec) * radiance * cosLi;
+	return vec3(NdotV, NdotV, NdotV);
 }
-
+float Convert_sRGB_FromLinear(float theLinearValue)
+{
+	return theLinearValue <= 0.0031308f
+		? theLinearValue * 12.92f
+		: pow(theLinearValue, 1.0f / 2.4f) * 1.055f - 0.055f;
+}
 
 vec3 CalcPointLight(PointLight light, vec3 F0, vec3 albedo, vec3 N, float metallic, float roughness, float ao, vec3 worldPos)
 {
-	
+	vec3 view = normalize(v_Input.ViewPosition - v_Input.WorldPosition);
+	float NdotV = max(dot(N, view), 0.0);
+
 	vec3 LightColor = light.Radience;
 
 	vec3 WorldPos = worldPos;
 	vec3 LightPos = light.Position;
 
-	vec3 V = normalize(v_Input.ViewPosition - worldPos);
-
-
-	vec3 Lo = vec3(0.0);
-
 	vec3 L = normalize(LightPos - WorldPos);
+	vec3 Lh = normalize(L + view);
 
-	float cosTheta = max(dot(N, L), 0.0);
-	vec3 H = normalize(V+L);
 	float distance = length(LightPos - WorldPos);
 	float radius = light.Radius;
 
 	float attenuation = clamp(1.0 - (distance * distance) / (radius * radius), 0.0, 1.0);
 	attenuation *= mix(attenuation, 1.0, 1.0); // falloff
 
-	vec3 radiance = LightColor * attenuation * cosTheta;
+	vec3 radiance = LightColor* attenuation;
 
 
-	vec3 F = fresnelSchlick(max(dot(H, V), 0.0), F0);
+	float cosLi = max(0.0, dot(N, L));
+	float cosLh = max(0.0, dot(N, Lh));
 
 
-	float NDF = DistributionGGX(N, H, roughness);
-	float G = GeometrySmith(N, V, L, roughness);
-	vec3 numerator = NDF * G * F;
-	float denominator = 4.0 * max(dot(N, V), 0.0) * max(dot(N, L), 0.0) + 0.0001;
-	vec3 specular = numerator / denominator;
+	vec3 F = fresnelSchlickRough(F0, max(0.0, dot(Lh, view)), roughness);
+	float D = NdfGGX(cosLh, roughness);
+	float G = GaSchlickGGX(cosLi, NdotV, roughness);
 
-	vec3 kS = F;
-	vec3 kD = vec3(1.0) - kS;
-	kD *= 1.0 - metallic;
+	vec3 kD = (1.0 - F) * (1.0 - metallic);
 
-	float NdotL = max(dot(N, L), 0.0);
-	Lo += (kD * albedo / PI + specular) * radiance * NdotL;
+	vec3 result = vec3(0.0f);
+	vec3 diffuse = kD * albedo;
 
-	return Lo;
+	vec3 spec = (F * D * G) / max(0.00001, 4.0f * cosLi * NdotV);
+	spec = clamp(spec, vec3(0.0f), vec3(10.0f));
+
+
+	result = (diffuse + spec) * radiance * cosLi;
+	//result = vec3(NdotV, NdotV, NdotV);
+	return result;
+}
+
+
+vec3 IBL(vec3 F0,vec3 NN, vec3 albedo, float metal, float rough)
+{
+
+
+	vec3 view = normalize(v_Input.ViewPosition - v_Input.WorldPosition);
+	float NdotV = max(dot(NN, view), 0.0);
+
+	vec3 F = fresnelSchlickRough(F0, NdotV, rough);
+	vec3 kd = (1.0 - F) * (1.0 - metal);
+
+
+
+	vec3 irradiance = texture(u_IrradienceMap, NN).rgb;
+
+	vec3 diffuseIBL = albedo *irradiance;
+
+
+	vec3 Lr = 2.0 * NdotV * NN - view;
+	float angle = radians(0.0f);
+	mat3x3 rotMat = { vec3(cos(angle),0.0,sin(angle)), vec3(0.0,1.0,0.0), vec3(-sin(angle),0.0,cos(angle)) };
+	vec3 rotY = rotMat * Lr;
+
+	int envRadianceTexLevels = textureQueryLevels(u_RadienceMap);
+
+	vec3 specularIrradiance = textureLod(u_RadienceMap, rotY, rough).xyz;
+	specularIrradiance = vec3(Convert_sRGB_FromLinear(specularIrradiance.x), Convert_sRGB_FromLinear(specularIrradiance.y), Convert_sRGB_FromLinear(specularIrradiance.z));
+	vec2 specularBRDF = texture(u_SpecularBRDFLUTTexture, vec2(NdotV, 1.0 - rough)).xy;
+	vec3 specularIBL = specularIrradiance * (F0 * specularBRDF.x + specularBRDF.y);
+
+
+	return kd* diffuseIBL + specularIBL;
 }
 
 void main()
 {
 
-	vec3 albedo = pow(texture(u_AlbedoMap, v_Input.TexCoord).rgb, vec3(2.2));
-	float metallic = 0.2f;
-	float roughness = 1.0f;
+	vec4 albedoSample = texture(u_AlbedoMap, v_Input.TexCoord);
+
+	float alpha = albedoSample.a;
+	vec3 albedo = pow(albedoSample.rgb, vec3(2.2));
+
+	float metallic = 0.95f;
+	float roughness = 0.05f;
 	float ao = 0.1f;
 
 	vec3 NN = NormalMap();
-
 	
 	vec3 F0 = vec3(0.04);
 	F0 = mix(F0, albedo, metallic);
@@ -265,28 +334,18 @@ void main()
 
 	DirectionLight dirLight;
 	dirLight.Direction = vec3(0.5f, 1.0f, 0.5f);
-	dirLight.Radience = vec3(255.0f/ 256.0f, 254.0f / 256.0f, 230.0f / 256.0f)*2.5f;
+	dirLight.Radience = vec3(255.0f/ 256.0f, 254.0f / 256.0f, 230.0f / 256.0f)*1.5f;
 
 	PointLight light1;
 	light1.Position = vec3(0.0f, 60.0f, 0.0f);
 	light1.Radience = vec3(15.0f, 15.0f, 12.0f);
 	light1.Radius = 250.0f;
 
-
-	/*mat3 nMatrix = transpose(inverse(mat3(v_Input.Model)));
-
-	vec3 T = normalize(nMatrix * v_Input.Tangent.xyz);
-	vec3 N = normalize(nMatrix * v_Input.Normal.xyz);
-
-	vec3 B = normalize(cross(T, N));
-
-	mat3 wNormal = mat3(T, B, N);
-	vec3 tangentNormal = texture(u_NormalMap, v_Input.TexCoord).xyz * 2.0 - 1.0;
-
-	NN = wNormal * tangentNormal;
-	*/
-	color = CalcDirectionLight(dirLight, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
-	color += CalcPointLight(light1, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
+	
+	
+	vec3 lightContribution = vec3(0.1f);
+	lightContribution = CalcDirectionLight(dirLight, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
+	lightContribution = CalcPointLight(light1, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
 
 
 	PointLight light2;
@@ -294,19 +353,24 @@ void main()
 	light2.Radience = vec3(15.0f, 15.0f, 25.0f);
 	light2.Radius = 150.0f;
 
-	color += CalcPointLight(light2, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
 
+	lightContribution = CalcPointLight(light2, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
 
-
-	float ambientStrength = 0.02f;
-	vec3 ambient = ambientStrength * albedo;
-	color += ambient;
+	vec3 IBLContribution = vec3(0.0f);
+	IBLContribution = IBL(F0, NN, albedo, metallic, roughness);
+	//color = v_Input.WorldNormals * vec3(1.0f);
+	//color = v_Input.Tangent;
+	//color = v_Input.Binormal;
+	//color = v_Input.Normal;
+	//color = v_Input.WorldPosition;
+	//color = vec3(1.0f);
+	color = lightContribution;
 
 	color = color / (color + vec3(1.0));
 	color = pow(color, vec3(1.0 / 2.2));
 
 
-//	if (color.a < 0.8)
-		//discard;
-	fragColor = vec4(color, 1.0f);
+	if (alpha < 0.8)
+		discard;
+	fragColor = vec4(color, alpha);
 }
