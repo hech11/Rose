@@ -796,7 +796,7 @@ namespace Rose
 		TextureCubeFiles files =
 		{
 			"assets/textures/skybox/sky1/rad/output_pmrem_posx_0_256x256.tga",
-			"assets/textures/skybox/sky1/rad/output_pmrem_posx_0_256x256.tga",
+			"assets/textures/skybox/sky1/rad/output_pmrem_negx_0_256x256.tga",
 			"assets/textures/skybox/sky1/rad/output_pmrem_posy_0_256x256.tga",
 			"assets/textures/skybox/sky1/rad/output_pmrem_negy_0_256x256.tga",
 			"assets/textures/skybox/sky1/rad/output_pmrem_posz_0_256x256.tga",

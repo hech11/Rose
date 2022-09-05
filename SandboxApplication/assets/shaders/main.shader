@@ -48,25 +48,25 @@ void main()
 
 	v_Output.TexCoord = a_TexCoord;
 	v_Output.Tangent = a_Tangent;
-	
 	mat3 nMatrix = mat3(ubo.Model);
 
-	vec3 T = normalize(nMatrix * a_Tangent.xyz);
+	vec3 T = normalize(nMatrix * a_Binormal.xyz);
 	vec3 N = normalize(nMatrix * a_Normal.xyz);
 	vec3 B = normalize(cross(N, T) * 1.0f);
 
+	v_Output.Binormal = B;
 
 	v_Output.WorldTransform = mat3(transform);
-	v_Output.WorldNormals = mat3(transform) * mat3(a_Tangent, a_Binormal, a_Normal);
+	v_Output.WorldNormals = mat3(transform) * mat3(a_Tangent, B, a_Normal);
 
 	v_Output.CameraView = mat3(ubo.View);
 
 
-	//mat3 inverseView = ubo.View;
+	mat4 inverseView = ubo.View;
 
-	//vec3 pos = vec3(inverseView[0][3], inverseView[1][3], inverseView[2][3]);
-	//v_Output.ViewPosition = inverseView* v_Output.WorldPosition;
-	v_Output.ViewPosition = vec3(ubo.View * vec4(v_Output.WorldPosition, 1.0f));
+	vec3 pos = vec3(inverseView[3][0], inverseView[3][1], inverseView[3][2]);
+	//v_Output.ViewPosition = vec3(ubo.View * vec4(v_Output.WorldPosition, 1.0f));
+	v_Output.ViewPosition = pos;
 
 	gl_Position = ubo.ViewProj * worldPos;
 }
@@ -225,7 +225,7 @@ vec3 CalcDirectionLight(DirectionLight light, vec3 F0, vec3 albedo, vec3 N, floa
 
 
 	result = (diffuse + spec) * radiance * cosLi;
-	return vec3(NdotV, NdotV, NdotV);
+	return result;
 }
 float Convert_sRGB_FromLinear(float theLinearValue)
 {
@@ -320,8 +320,8 @@ void main()
 	float alpha = albedoSample.a;
 	vec3 albedo = pow(albedoSample.rgb, vec3(2.2));
 
-	float metallic = 0.95f;
-	float roughness = 0.05f;
+	float metallic = 0.1f;
+	float roughness = 0.8f;
 	float ao = 0.1f;
 
 	vec3 NN = NormalMap();
@@ -345,7 +345,7 @@ void main()
 	
 	vec3 lightContribution = vec3(0.1f);
 	lightContribution = CalcDirectionLight(dirLight, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
-	lightContribution = CalcPointLight(light1, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
+	lightContribution += CalcPointLight(light1, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
 
 
 	PointLight light2;
@@ -354,7 +354,7 @@ void main()
 	light2.Radius = 150.0f;
 
 
-	lightContribution = CalcPointLight(light2, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
+	lightContribution += CalcPointLight(light2, F0, albedo, NN, metallic, roughness, ao, v_Input.WorldPosition);
 
 	vec3 IBLContribution = vec3(0.0f);
 	IBLContribution = IBL(F0, NN, albedo, metallic, roughness);
@@ -364,7 +364,7 @@ void main()
 	//color = v_Input.Normal;
 	//color = v_Input.WorldPosition;
 	//color = vec3(1.0f);
-	color = lightContribution;
+	color = IBLContribution+lightContribution;
 
 	color = color / (color + vec3(1.0));
 	color = pow(color, vec3(1.0 / 2.2));
