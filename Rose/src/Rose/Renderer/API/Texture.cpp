@@ -5,6 +5,7 @@
 #include "stb_image/stb_image.h"
 
 #include "Rose/Core/Application.h"
+#include "Rose/Core/Skybox.h"
 
 
 namespace Rose
@@ -16,7 +17,7 @@ namespace Rose
 		: m_Props(props)
 	{
 
-		stbi_set_flip_vertically_on_load(1);
+		//stbi_set_flip_vertically_on_load(1);
 		m_IsFreed = false;
 		uint8_t* textureBuffer = nullptr;
 		uint32_t size = 0;
@@ -303,7 +304,7 @@ namespace Rose
 				textureBuffers.push_back(temp);
 			}
 		}
-		stbi_set_flip_vertically_on_load(true);
+		//stbi_set_flip_vertically_on_load(true);
 
 		if(isHDRI)
 			size = m_Width * m_Height * 4 * 6*sizeof(float);
@@ -775,7 +776,19 @@ namespace Rose
 
 	std::shared_ptr<TextureCube> EnviormentTexture::GetIrradianceMap()
 	{
+#if USESKY2
 
+		TextureCubeFiles files =
+		{
+			"assets/textures/skybox/sky2/irr/output_iem_posx.tga",
+			"assets/textures/skybox/sky2/irr/output_iem_negx.tga",
+			"assets/textures/skybox/sky2/irr/output_iem_posy.tga",
+			"assets/textures/skybox/sky2/irr/output_iem_negy.tga",
+			"assets/textures/skybox/sky2/irr/output_iem_posz.tga",
+			"assets/textures/skybox/sky2/irr/output_iem_negz.tga",
+ 		};
+#endif
+#if USESKY1
 		TextureCubeFiles files =
 		{
 			"assets/textures/skybox/sky1/irr/output_iem_posx.tga",
@@ -785,6 +798,7 @@ namespace Rose
 			"assets/textures/skybox/sky1/irr/output_iem_posz.tga",
 			"assets/textures/skybox/sky1/irr/output_iem_negz.tga",
 		};
+#endif
 
 		static std::shared_ptr<TextureCube> Instance = std::make_shared<TextureCube>(files);
 		return Instance;
@@ -792,7 +806,19 @@ namespace Rose
 
 	std::shared_ptr<TextureCube> EnviormentTexture::GetRadienceMap()
 	{
+#if USESKY2
 
+ 		TextureCubeFiles files =
+ 		{
+ 			"assets/textures/skybox/sky2/rad/output_pmrem_posx_0_256x256.tga",
+ 			"assets/textures/skybox/sky2/rad/output_pmrem_negx_0_256x256.tga",
+ 			"assets/textures/skybox/sky2/rad/output_pmrem_posy_0_256x256.tga",
+ 			"assets/textures/skybox/sky2/rad/output_pmrem_negy_0_256x256.tga",
+ 			"assets/textures/skybox/sky2/rad/output_pmrem_posz_0_256x256.tga",
+ 			"assets/textures/skybox/sky2/rad/output_pmrem_negz_0_256x256.tga",
+ 		};
+#endif
+#if USESKY1
 		TextureCubeFiles files =
 		{
 			"assets/textures/skybox/sky1/rad/output_pmrem_posx_0_256x256.tga",
@@ -802,6 +828,7 @@ namespace Rose
 			"assets/textures/skybox/sky1/rad/output_pmrem_posz_0_256x256.tga",
 			"assets/textures/skybox/sky1/rad/output_pmrem_negz_0_256x256.tga",
 		};
+#endif
 		static std::shared_ptr<TextureCube> Instance = std::make_shared<TextureCube>(files);
 		return Instance;
 	}
@@ -809,7 +836,7 @@ namespace Rose
 	std::shared_ptr<Texture2D> EnviormentTexture::GetSpecularBRDF()
 	{
 		TextureProperties props = { false };
-		static std::shared_ptr<Texture2D> Instance = std::make_shared<Texture2D>("assets/textures/specularBRDF.png", props);
+		static std::shared_ptr<Texture2D> Instance = std::make_shared<Texture2D>("assets/textures/BRDF_LUT.tga", props);
 		return Instance;
 	}
 

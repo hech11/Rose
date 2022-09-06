@@ -10,7 +10,7 @@ namespace Rose
 
 	enum class PBRTextureType
 	{
-		Albedo, Specular, Normal, Irr, SpecBRDF, Rad
+		Albedo, Specular, Normal, Irr, SpecBRDF, Rad, Metal, Rough
 	};
 
 	struct MaterialUniform // We may not need this as we could put uniforms into its own UBO instead unless its a sampler.

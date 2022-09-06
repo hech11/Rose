@@ -4,12 +4,19 @@
 
 layout(location = 0) in vec3 a_Position;
 
-layout(binding = 0) uniform BufferObject
+layout(std140, binding = 0) uniform BufferObject
 {
 	mat4 Model;
 	mat4 View;
 	mat4 Proj;
 	mat4 ViewProj;
+
+
+	vec4 DirectionLightDir;
+	vec4 DirectionLightColor;
+
+	vec4 DirLightIntensity;
+	vec4 EnivormentMapIntensity;
 } ubo;
 
 
@@ -17,6 +24,8 @@ struct VertexOutput
 {
 	vec3 LocalPosition;
 	vec3 TexCoord;
+
+	float EnvIntensity;
 };
 
 layout(location = 0) out VertexOutput v_Output;
@@ -30,6 +39,7 @@ void main()
 	gl_Position = worldPos.xyww;
 
 	v_Output.LocalPosition = a_Position;
+	v_Output.EnvIntensity = ubo.EnivormentMapIntensity.x;
 	v_Output.TexCoord = vec3(a_Position.x, a_Position.y, -a_Position.z);
 }
 
@@ -46,6 +56,8 @@ struct VertexOutput
 {
 	vec3 LocalPosition;
 	vec3 TexCoord;
+
+	float EnvIntensity;
 };
 
 layout(location = 0) in VertexOutput v_Input;
@@ -68,15 +80,15 @@ void main()
 
 	//vec2 uv = SampleSphericalMap(normalize(v_Input.LocalPosition));
 
-	vec3 color = texture(u_AlbedoMap, v_Input.TexCoord).rgb;
+	vec3 color = pow(texture(u_AlbedoMap, v_Input.TexCoord).rgb, vec3(2.2));
 	//vec3 albedo = texture(u_AlbedoMap, uv).rgb;
 
 
 	color = color / (color + vec3(1.0));
 	color = pow(color, vec3(1.0 / 2.2));
-
+	
 
 	//	if (color.a < 0.8)
 			//discard;
-	fragColor = vec4(color, 1.0f);
+	fragColor = vec4(color * v_Input.EnvIntensity, 1.0f);
 }

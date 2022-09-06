@@ -134,6 +134,12 @@ namespace Rose
 			auto normMaps = LoadTextures(material, aiTextureType_NORMALS);
 			result.Uniforms.insert(result.Uniforms.end(), normMaps.begin(), normMaps.end());
 
+			auto metalMaps = LoadTextures(material, aiTextureType_METALNESS);
+			result.Uniforms.insert(result.Uniforms.end(), metalMaps.begin(), metalMaps.end());
+
+			auto roughMaps = LoadTextures(material, aiTextureType_SHININESS);
+			result.Uniforms.insert(result.Uniforms.end(), roughMaps.begin(), roughMaps.end());
+
 			MaterialUniform irr;
 			irr.Texture3DCube = EnviormentTexture::GetIrradianceMap();
 			irr.TextureType = PBRTextureType::Irr;
@@ -188,7 +194,10 @@ namespace Rose
 				uniform.TextureType = PBRTextureType::Specular;
 			else if (type == aiTextureType_NORMALS)
 				uniform.TextureType = PBRTextureType::Normal;
-
+			else if (type == aiTextureType_METALNESS)
+				uniform.TextureType = PBRTextureType::Metal;
+			else if (type == aiTextureType_DIFFUSE_ROUGHNESS || type == aiTextureType_SHININESS)
+				uniform.TextureType = PBRTextureType::Rough;
 
 			aiString str;
 			mat->GetTexture(type, i, &str);
@@ -214,6 +223,10 @@ namespace Rose
 				uniform.TextureType = PBRTextureType::Specular;
 			else if (type == aiTextureType_NORMALS)
 				uniform.TextureType = PBRTextureType::Normal;
+			else if (type == aiTextureType_METALNESS)
+				uniform.TextureType = PBRTextureType::Metal;
+			else if (type == aiTextureType_DIFFUSE_ROUGHNESS || type == aiTextureType_SHININESS)
+				uniform.TextureType = PBRTextureType::Rough;
 
 			uniform.Texture = Material::DefaultWhiteTexture();
 

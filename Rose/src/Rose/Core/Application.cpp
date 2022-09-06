@@ -11,9 +11,12 @@
 #include "glm/gtx/transform.hpp"
 
 #include "Rose/Renderer/API/VKMemAllocator.h"
+#include "Skybox.h"
 
 #include <imgui/imgui.h>
 #include <glfw/glfw3.h>
+#include "glm/fwd.hpp"
+#include "glm/gtx/quaternion.hpp"
 
 
 
@@ -23,7 +26,7 @@ namespace Rose
 
 	Application* Application::s_INSTANCE = nullptr;
 
-	static bool useCamera = false;
+	static bool useCamera = true;
 	Application::Application()
 	{
 		s_INSTANCE = this;
@@ -38,58 +41,11 @@ namespace Rose
 		CreateVulkanInstance();
 
 		VKMemAllocator::Init();
-		m_TestModel = std::make_shared<Model>("assets/models/sponza/sponza.gltf");
-		//m_TestModel = std::make_shared<Model>("assets/models/sphere.fbx");
-		m_SphereModel = std::make_shared<Model>("assets/models/New/Sphere.fbx");
+		//m_TestModel = std::make_shared<Model>("assets/models/sponza/sponza.gltf");
+		m_TestModel = std::make_shared<Model>("assets/models/sphere.fbx");
+		m_SphereModel = std::make_shared<Model>("assets/models/Cerberus_by_Andrew_Maximov/Cerberus_LP_mapped.fbx");
+		//m_SphereModel = std::make_shared<Model>("assets/models/cube.obj");
 		//m_TestModel = std::make_shared<Model>("assets/models/coneandsphere.obj");
-
-
-
-		float skyboxVerts[] =
-		{
-			// back face
-			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f,  -1.0f,
-			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f,  -1.0f,
-			 1.0f, -1.0f, -1.0f,  0.0f,  0.0f,  -1.0f,
-			 1.0f,  1.0f, -1.0f,  0.0f,  0.0f,  -1.0f,
-			-1.0f, -1.0f, -1.0f,  0.0f,  0.0f,  -1.0f,
-			-1.0f,  1.0f, -1.0f,  0.0f,  0.0f,  -1.0f,
-			// front face		  
-			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
-			 1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
-			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
-			 1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
-			-1.0f,  1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
-			-1.0f, -1.0f,  1.0f,  0.0f,  0.0f,  1.0f,
-			// left face		  
-			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f,
-			-1.0f,  1.0f, -1.0f, -1.0f,  0.0f,  0.0f,
-			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f,
-			-1.0f, -1.0f, -1.0f, -1.0f,  0.0f,  0.0f,
-			-1.0f, -1.0f,  1.0f, -1.0f,  0.0f,  0.0f,
-			-1.0f,  1.0f,  1.0f, -1.0f,  0.0f,  0.0f,
-			// right face					 
-			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f,
-			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,
-			 1.0f,  1.0f, -1.0f,  1.0f,  0.0f,  0.0f,
-			 1.0f, -1.0f, -1.0f,  1.0f,  0.0f,  0.0f,
-			 1.0f,  1.0f,  1.0f,  1.0f,  0.0f,  0.0f,
-			 1.0f, -1.0f,  1.0f,  1.0f,  0.0f,  0.0f,
-			 // bottom face					    
-			 -1.0f, -1.0f, -1.0f,  0.0f, -1.0f, 0.0f,
-			  1.0f, -1.0f, -1.0f,  0.0f, -1.0f, 0.0f,
-			  1.0f, -1.0f,  1.0f,  0.0f, -1.0f, 0.0f,
-			  1.0f, -1.0f,  1.0f,  0.0f, -1.0f, 0.0f,
-			 -1.0f, -1.0f,  1.0f,  0.0f, -1.0f, 0.0f,
-			 -1.0f, -1.0f, -1.0f,  0.0f, -1.0f, 0.0f,
-			 // top face					    
-			 -1.0f,  1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
-			  1.0f,  1.0f,  1.0f,  0.0f,  1.0f, 0.0f,
-			  1.0f,  1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
-			  1.0f,  1.0f,  1.0f,  0.0f,  1.0f, 0.0f,
-			 -1.0f,  1.0f, -1.0f,  0.0f,  1.0f, 0.0f,
-			 -1.0f,  1.0f,  1.0f,  0.0f,  1.0f, 0.0f
-		};
 
 		float skyboxV[] =
 		{
@@ -134,19 +90,7 @@ namespace Rose
 
 		MaterialUniform diffuseUniform;
 
-
-
-
-// 		TextureCubeFiles files =
-// 		{
-// 			{std::string("assets/textures/skybox/sky1/SDR/output_skybox_posx.tga")},
-// 			{std::string("assets/textures/skybox/sky1/SDR/output_skybox_negx.tga")},
-// 			{std::string("assets/textures/skybox/sky1/SDR/output_skybox_posy.tga")},
-// 			{std::string("assets/textures/skybox/sky1/SDR/output_skybox_negy.tga")},
-// 			{std::string("assets/textures/skybox/sky1/SDR/output_skybox_posz.tga")},
-// 			{std::string("assets/textures/skybox/sky1/SDR/output_skybox_negz.tga")}
-// 		};
-
+#if USESKY1
 		TextureCubeFiles files =
 		{
 			{std::string("assets/textures/skybox/sky1/output_skybox_posx.hdr")},
@@ -156,6 +100,19 @@ namespace Rose
 			{std::string("assets/textures/skybox/sky1/output_skybox_posz.hdr")},
 			{std::string("assets/textures/skybox/sky1/output_skybox_negz.hdr")}
 		};
+#endif
+
+#if USESKY2
+ 		TextureCubeFiles files =
+ 		{
+ 			{std::string("assets/textures/skybox/sky2/output_skybox_posx.hdr")},
+ 			{std::string("assets/textures/skybox/sky2/output_skybox_negx.hdr")},
+ 			{std::string("assets/textures/skybox/sky2/output_skybox_posy.hdr")},
+ 			{std::string("assets/textures/skybox/sky2/output_skybox_negy.hdr")},
+ 			{std::string("assets/textures/skybox/sky2/output_skybox_posz.hdr")},
+ 			{std::string("assets/textures/skybox/sky2/output_skybox_negz.hdr")}
+ 		};
+#endif
 		diffuseUniform.Texture3DCube = std::make_shared<TextureCube>(files);
 		diffuseUniform.TextureType = PBRTextureType::Rad;
 		m_SkyboxUniforms.push_back(diffuseUniform);
@@ -179,8 +136,20 @@ namespace Rose
 		CleanUp();
 	}
 
-	static glm::vec3 spherePos = { 0.0f, 0.0f, 0.0f };
-	static glm::vec3 sphereScale = { 0.1f, 0.1f, 0.1f };
+//	static glm::vec3 spherePos = { 0.0f, 150.0f, 0.0f };
+//	static glm::vec3 sphereRot = { -90.0f, 0.0f, 0.0f};
+	//static glm::vec3 spherePos = { 0.0f, 0.0f, 0.0f };
+	static glm::vec3 spherePos = { 0.0f, 2.0f, 0.0f };
+	//static glm::vec3 sphereRot = { 0.0f, 0.0f, 0.0f };
+//	static glm::vec3 sphereRot = { 0.0f, 180.0f, 0.0f };
+	static glm::vec3 sphereRot = { 90.0f, 0.0, 180.0f };
+	static glm::vec3 sphereScale = { 1.0f, 1.0f, 1.0f };
+
+	static glm::vec4 DirLightDir = { 1.0f, 1.0f, 1.0f , 1.0f };
+	static glm::vec4 DirLightColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+	static float DirLightIntensity = 1.0f;
+	static float EnviormentMapIntensity = 2.0f;
+
 
 	void Application::Run()
 	{
@@ -198,8 +167,15 @@ namespace Rose
 		{
 			m_Camera->OnUpdate(0.016f);
 
+			ubo.DirLightDir = DirLightDir;
+			ubo.DirLightCol = DirLightColor;
+			ubo.DirLightIntensity.x = DirLightIntensity;
+			ubo.EnivormentMapIntensity.x = EnviormentMapIntensity;
+
 			if (useCamera)
 			{
+				
+
 				ubo.View = m_Camera->GetCam().GetView();
 				ubo.Proj = m_Camera->GetCam().GetProj();
 				ubo.ViewProj = m_Camera->GetCam().GetProjView();
@@ -209,20 +185,21 @@ namespace Rose
 				ubo.ViewProj = ubo.Proj * ubo.View;
 
 			}
-
-
+		
 			glfwPollEvents();
 			for (auto& mat : m_TestModel->GetMaterials())
 			{
+				ubo.Model = glm::mat4(1.0f);
 				mat.ShaderData->UpdateUniformBuffer(&ubo, sizeof(ubo), 0);
 			}
 
 			for (auto& mat : m_SphereModel->GetMaterials())
 			{
+				ubo.Model = glm::translate(glm::mat4(1.0f), spherePos) * glm::toMat4(glm::quat(glm::radians(sphereRot))) * glm::scale(glm::mat4(1.0f), sphereScale);
 				mat.ShaderData->UpdateUniformBuffer(&ubo, sizeof(ubo), 0);
 			}
 
-
+			ubo.Model = glm::mat4(1.0f);
 			m_SkyboxShader->UpdateUniformBuffer(&ubo, sizeof(ubo), 0);
 			DrawOntoScreen();
 
@@ -585,8 +562,17 @@ namespace Rose
 	{
 		ImGui::Begin("Test window!");
 		ImGui::Text("This is some text");
-		ImGui::SliderFloat3("model pos", &spherePos.x, -10.0f, 10.0f);
-		ImGui::SliderFloat3("model scale", &sphereScale.x, -10.0f, 10.0f);
+		ImGui::DragFloat3("model pos", &spherePos.x);
+		ImGui::DragFloat3("model rot", &sphereRot.x);
+		ImGui::DragFloat3("model scale", &sphereScale.x);
+		ImGui::NewLine();
+		ImGui::SliderFloat3("Dir light Direction", &DirLightDir.x, -1.0f, 1.0f);
+		ImGui::ColorEdit3("Dir light Color", &DirLightColor.x);
+		ImGui::DragFloat("Dir light Intensity", &DirLightIntensity);
+		ImGui::NewLine();
+		ImGui::SliderFloat("EnviormentMapIntensity", &EnviormentMapIntensity, 0.0f, 5.0f);
+
+
 		ImGui::Checkbox("Use camera", &useCamera);
 		ImGui::End();
 	}
