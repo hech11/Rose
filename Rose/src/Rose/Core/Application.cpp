@@ -26,60 +26,73 @@ namespace Rose
 
 	Application* Application::s_INSTANCE = nullptr;
 
-	static bool useCamera = true;
+
+	float skyboxV[] =
+	{
+		-1.0f, -1.0f,  1.0f,
+		 1.0f, -1.0f,  1.0f,
+		 1.0f, -1.0f, -1.0f,
+		-1.0f, -1.0f, -1.0f,
+		-1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f,  1.0f,
+		 1.0f,  1.0f, -1.0f,
+		-1.0f,  1.0f, -1.0f,
+	};
+
+	uint32_t skyboxI[] =
+	{
+		1,2,6,
+		6,5,1,
+
+		0,4,7,
+		7,3,0,
+
+		4,5,6,
+		6,7,4,
+
+		0,3,2,
+		2,1,0,
+
+		0,1,5,
+		5,4,0,
+
+		3,7,6,
+		6,2,3
+	};
+
+
+
+	static glm::vec3 spherePos = { 0.0f, 150.0f, 0.0f };
+	//static glm::vec3 sphereRot = { -90.0f, 0.0f, 0.0f};
+	//static glm::vec3 spherePos = { 0.0f, 0.0f, 0.0f };
+	//static glm::vec3 spherePos = { 0.0f, 2.0f, 0.0f };
+	//static glm::vec3 sphereRot = { 0.0f, 0.0f, 0.0f };
+	//static glm::vec3 sphereRot = { 0.0f, 180.0f, 0.0f };
+	static glm::vec3 sphereRot = { 90.0f, 0.0, 180.0f };
+	static glm::vec3 sphereScale = { 1.0f, 1.0f, 1.0f };
+
+	static glm::vec4 DirLightDir = { 1.0f, 1.0f, 1.0f , 1.0f };
+	static glm::vec4 DirLightColor = { 1.0f, 1.0f, 1.0f, 1.0f };
+	static float DirLightIntensity = 1.0f;
+	static float EnviormentMapIntensity = 2.0f;
+
+
 	Application::Application()
 	{
 		s_INSTANCE = this;
 		m_ImguiLayer = new ImguiLayer;
 
 
-		
-			
-		
 		MakeWindow();
 		CreateWinGLFWSurface();
 		CreateVulkanInstance();
 
 		VKMemAllocator::Init();
 		//m_TestModel = std::make_shared<Model>("assets/models/sponza/sponza.gltf");
-		m_TestModel = std::make_shared<Model>("assets/models/sphere.fbx");
+		m_TestModel = std::make_shared<Model>("assets/models/grid-platstic/grid-plastic.fbx");
 		m_SphereModel = std::make_shared<Model>("assets/models/Cerberus_by_Andrew_Maximov/Cerberus_LP_mapped.fbx");
-		//m_SphereModel = std::make_shared<Model>("assets/models/cube.obj");
-		//m_TestModel = std::make_shared<Model>("assets/models/coneandsphere.obj");
 
-		float skyboxV[] =
-		{
-			-1.0f, -1.0f,  1.0f,
-			 1.0f, -1.0f,  1.0f,
-			 1.0f, -1.0f, -1.0f,
-			-1.0f, -1.0f, -1.0f,
-			-1.0f,  1.0f,  1.0f,
-			 1.0f,  1.0f,  1.0f,
-			 1.0f,  1.0f, -1.0f,
-			-1.0f,  1.0f, -1.0f,
-		};
-
-		uint32_t skyboxI[] =
-		{
-			1,2,6,
-			6,5,1,
-
-			0,4,7,
-			7,3,0,
-
-			4,5,6,
-			6,7,4,
-
-			0,3,2,
-			2,1,0,
-			
-			0,1,5,
-			5,4,0,
-
-			3,7,6,
-			6,2,3
-		};
-
+		
 		ShaderAttributeLayout layout =
 		{
 			{"a_Position", 0, ShaderMemberType::Float3}
@@ -136,20 +149,6 @@ namespace Rose
 		CleanUp();
 	}
 
-//	static glm::vec3 spherePos = { 0.0f, 150.0f, 0.0f };
-//	static glm::vec3 sphereRot = { -90.0f, 0.0f, 0.0f};
-	//static glm::vec3 spherePos = { 0.0f, 0.0f, 0.0f };
-	static glm::vec3 spherePos = { 0.0f, 2.0f, 0.0f };
-	//static glm::vec3 sphereRot = { 0.0f, 0.0f, 0.0f };
-//	static glm::vec3 sphereRot = { 0.0f, 180.0f, 0.0f };
-	static glm::vec3 sphereRot = { 90.0f, 0.0, 180.0f };
-	static glm::vec3 sphereScale = { 1.0f, 1.0f, 1.0f };
-
-	static glm::vec4 DirLightDir = { 1.0f, 1.0f, 1.0f , 1.0f };
-	static glm::vec4 DirLightColor = { 1.0f, 1.0f, 1.0f, 1.0f };
-	static float DirLightIntensity = 1.0f;
-	static float EnviormentMapIntensity = 2.0f;
-
 
 	void Application::Run()
 	{
@@ -172,19 +171,9 @@ namespace Rose
 			ubo.DirLightIntensity.x = DirLightIntensity;
 			ubo.EnivormentMapIntensity.x = EnviormentMapIntensity;
 
-			if (useCamera)
-			{
-				
-
-				ubo.View = m_Camera->GetCam().GetView();
-				ubo.Proj = m_Camera->GetCam().GetProj();
-				ubo.ViewProj = m_Camera->GetCam().GetProjView();
-			} else {
-				ubo.View = glm::translate(glm::mat4(1.0f), { 0.0f, 0.0f, -10.0f });
-				ubo.Proj = glm::perspective(glm::radians(60.0f), 16.0f / 9.0f, 0.1f, 1000.0f);
-				ubo.ViewProj = ubo.Proj * ubo.View;
-
-			}
+			ubo.View = m_Camera->GetCam().GetView();
+			ubo.Proj = m_Camera->GetCam().GetProj();
+			ubo.ViewProj = m_Camera->GetCam().GetProjView();
 		
 			glfwPollEvents();
 			for (auto& mat : m_TestModel->GetMaterials())
@@ -572,8 +561,6 @@ namespace Rose
 		ImGui::NewLine();
 		ImGui::SliderFloat("EnviormentMapIntensity", &EnviormentMapIntensity, 0.0f, 5.0f);
 
-
-		ImGui::Checkbox("Use camera", &useCamera);
 		ImGui::End();
 	}
 

@@ -51,7 +51,7 @@ void main()
 	mat4 transform = ubo.Model;
 
 	vec4 worldPos = vec4(a_Position, 1.0);
-	vec4 worldPos2 = vec4(transform[0][3], transform[1][3], transform[2][3], 1.0f)*vec4(a_Position, 1.0);
+	vec4 worldPos2 = transform* vec4(a_Position, 1.0);
 
 
 	v_Output.WorldPosition = worldPos2.xyz;
@@ -292,13 +292,13 @@ vec3 IBL(vec3 F0,vec3 NN, vec3 albedo, float metal, float rough)
 
 	// TODO: query lods with proper filtering
 	int envRadianceTexLevels = textureQueryLevels(u_RadienceMap);
-	vec3 specularIrradiance = textureLod(u_RadienceMap, rotY, 0).xyz;
+	vec3 specularIrradiance = textureLod(u_RadienceMap, rotY, rough* 1).xyz;
 	specularIrradiance = toLinear(specularIrradiance);
 
 	vec2 specularBRDF = texture(u_SpecularBRDFLUTTexture, vec2(NdotV, 1.0 - rough)).xy;
 	vec3 specularIBL = specularIrradiance * (F0 * specularBRDF.x + specularBRDF.y);
 
-	return kd* diffuseIBL + specularIBL;
+	return kd* diffuseIBL+specularIBL;
 }
 
 void main()

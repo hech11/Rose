@@ -836,7 +836,7 @@ namespace Rose
 	std::shared_ptr<Texture2D> EnviormentTexture::GetSpecularBRDF()
 	{
 		TextureProperties props = { false };
-		static std::shared_ptr<Texture2D> Instance = std::make_shared<Texture2D>("assets/textures/BRDF_LUT.tga", props);
+		static std::shared_ptr<Texture2D> Instance = std::make_shared<Texture2D>("assets/textures/specularBRDF.png", props);
 		return Instance;
 	}
 
