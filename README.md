@@ -63,10 +63,13 @@ Everything should build properly.
  
 
 ## Platform support
-| Windows 10-64bit | Mac | Linux |
-| --- | --- | --- |
-| :heavy_check_mark: | :x: | :x: |
+| Windows 11 | Windows 10-64bit | Mac | Linux |
+| --- | --- | --- | --- |
+| :grey_question: | :heavy_check_mark: | :x: | :x: |
 
+<blockquote>
+I'm not sure if going to support Mac and Linux. I currently do not have Windows 11 so I cannot verify if this project would compile on that OS
+</blockquote>
 
 ## GPU support
 | AMD | Nvidia | Intel |
