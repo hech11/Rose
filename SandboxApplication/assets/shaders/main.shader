@@ -14,12 +14,8 @@ struct VertexOutput
 	vec3 WorldPosition;
 	vec3 Normal;
 	vec2 TexCoord;
-	vec3 Tangent;
-	vec3 Binormal;
 	mat3 WorldNormals;
-	mat3 WorldTransform;
 
-	mat3 CameraView;
 	vec3 ViewPosition;
 
 	vec4 DirectionLightDir;
@@ -58,25 +54,20 @@ void main()
 	v_Output.Normal = mat3(transform) * a_Normal;
 
 	v_Output.TexCoord = vec2(a_TexCoord.x, 1.0f-a_TexCoord.y);
-	v_Output.Tangent = a_Tangent;
 	mat3 nMatrix = mat3(transform);
 
 	vec3 T = normalize(nMatrix * a_Binormal.xyz);
 	vec3 N = normalize(nMatrix * a_Normal.xyz);
 	vec3 B = normalize(cross(N, T) * 1.0f);
 
-	v_Output.Binormal = B;
 
-	v_Output.WorldTransform = mat3(transform);
 	v_Output.WorldNormals = mat3(transform) * mat3(a_Tangent, B, a_Normal);
 
-	v_Output.CameraView = mat3(ubo.View);
 
 
 	mat4 inverseView = ubo.View;
 
 	vec3 pos = vec3(inverseView[3][0], inverseView[3][1], inverseView[3][2]);
-	///v_Output.ViewPosition = vec3(ubo.View * vec4(v_Output.WorldPosition, 1.0f));
 	v_Output.ViewPosition = pos;
 
 	v_Output.DirectionLightDir = ubo.DirectionLightDir;
@@ -121,13 +112,9 @@ struct VertexOutput
 	vec3 WorldPosition;
 	vec3 Normal;
 	vec2 TexCoord;
-	vec3 Tangent;
-	vec3 Binormal;
 
 	mat3 WorldNormals;
-	mat3 WorldTransform;
 
-	mat3 CameraView;
 	vec3 ViewPosition;
 
 	vec4 DirectionLightDir;

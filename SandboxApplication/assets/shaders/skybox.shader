@@ -63,32 +63,13 @@ struct VertexOutput
 layout(location = 0) in VertexOutput v_Input;
 
 
-const float PI = 3.14159265359;
-const vec2 invAtan = vec2(0.1591, 0.3183);
-
-
-vec2 SampleSphericalMap(vec3 v)
-{
-	vec2 uv = vec2(atan(v.z, v.x), asin(v.y));
-	uv *= invAtan;
-	uv += 0.5;
-	return uv;
-}
-
 void main()
 {
 
-	//vec2 uv = SampleSphericalMap(normalize(v_Input.LocalPosition));
-
 	vec3 color = pow(texture(u_AlbedoMap, v_Input.TexCoord).rgb, vec3(2.2));
-	//vec3 albedo = texture(u_AlbedoMap, uv).rgb;
-
 
 	color = color / (color + vec3(1.0));
 	color = pow(color, vec3(1.0 / 2.2));
-	
 
-	//	if (color.a < 0.8)
-			//discard;
 	fragColor = vec4(color * v_Input.EnvIntensity, 1.0f);
 }

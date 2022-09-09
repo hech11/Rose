@@ -89,7 +89,7 @@ namespace Rose
 
 		VKMemAllocator::Init();
 		//m_TestModel = std::make_shared<Model>("assets/models/sponza/sponza.gltf");
-		m_TestModel = std::make_shared<Model>("assets/models/grid-platstic/grid-plastic.fbx");
+		m_TestModel = std::make_shared<Model>("assets/models/used-stainless-steel/used-stainless-steel.fbx");
 		m_SphereModel = std::make_shared<Model>("assets/models/Cerberus_by_Andrew_Maximov/Cerberus_LP_mapped.fbx");
 
 		
