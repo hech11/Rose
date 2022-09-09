@@ -16,6 +16,16 @@ namespace Rose
 		bool IsNormalMap = false;
 	};
 
+	struct TextureCubeFiles
+	{
+		std::string PosX;
+		std::string NegX;
+		std::string PosY;
+		std::string NegY;
+		std::string PosZ;
+		std::string NegZ;
+	};
+
 	class Texture2D
 	{
 
@@ -46,5 +56,44 @@ namespace Rose
 
 	};
 
+
+	class TextureCube
+	{
+		public :
+			TextureCube(const TextureCubeFiles& filepaths);
+			~TextureCube();
+
+			const VkImageView& GetImageView() const { return m_ImageView; }
+			const VkSampler& GetSampler() const { return  m_Sampler; }
+
+			void Destroy();
+
+		private:
+			void CreateSampler();
+			void GenerateMips(VkFormat imageFormat);
+		
+		
+		private:
+			int32_t m_Width, m_Height, m_BPP;
+			uint32_t m_MipLevel;
+		
+		
+			VkSampler m_Sampler;
+			VkImage m_Image;
+			VkImageView m_ImageView;
+			VmaAllocation m_ImageMemoryAllocation;
+
+			bool m_IsFreed = true;
+	};
+
+
+	class EnviormentTexture
+	{
+		public :
+			static std::shared_ptr<TextureCube> GetIrradianceMap();
+			static std::shared_ptr<TextureCube> GetRadienceMap();
+			static std::shared_ptr<Texture2D> GetSpecularBRDF();
+			
+	};
 
 }

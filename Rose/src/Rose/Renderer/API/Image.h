@@ -14,13 +14,13 @@ namespace Rose
 	{
 
 		public :
-			Image(int width, int height, VkSampleCountFlagBits samples, bool isNormalMap = false, uint32_t mipMapLevel = 1);
+			Image(int width, int height, VkSampleCountFlagBits samples, bool isNormalMap = false, uint32_t mipMapLevel = 1, bool isHDRI = false, bool isCubemap = false);
 			~Image();
 
 			const VkImage& GetImageBuffer() const { return m_BufferID; }
 			VkImage& GetImageBuffer() { return m_BufferID; }
 
-			void TransitionLayout(VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout);
+			void TransitionLayout(VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout, bool cube = false);
 			void CopyBufferToImage(VkBuffer srcBuffer, int width, int height);
 
 			void CreateImageViews(VkFormat format, uint32_t amount = 1); // TODO: mulitple views could have different formats?
@@ -37,6 +37,7 @@ namespace Rose
 			std::vector<VkImageView> m_ImageViews;
 
 			bool m_IsFreed = true;
+			bool m_IsCubemap = false;
 	};
 
 }

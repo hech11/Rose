@@ -16,7 +16,12 @@ namespace Rose
 	{
 
 		Assimp::Importer importer;
-		const aiScene* scene = importer.ReadFile(filepath, aiPostProcessSteps::aiProcess_Triangulate | aiPostProcessSteps::aiProcess_CalcTangentSpace);
+		const aiScene* scene = importer.ReadFile(filepath,
+
+			aiPostProcessSteps::aiProcess_Triangulate | aiPostProcessSteps::aiProcess_CalcTangentSpace
+			| aiPostProcessSteps::aiProcess_GenNormals | aiPostProcessSteps::aiProcess_GenUVCoords
+			| aiPostProcessSteps::aiProcess_ValidateDataStructure | aiPostProcessSteps::aiProcess_JoinIdenticalVertices  | aiProcess_SortByPType
+		); 
 
 
 		if (!scene || scene->mFlags & AI_SCENE_FLAGS_INCOMPLETE || !scene->mRootNode)
@@ -37,7 +42,11 @@ namespace Rose
 			material.ShaderData->DestroyPipeline();
 			for (auto& uniform : material.Uniforms)
 			{
-				uniform.Texture->Destroy();
+				if(uniform.Texture)
+					uniform.Texture->Destroy();
+				if(uniform.Texture3DCube)
+					uniform.Texture3DCube->Destroy();
+
 			}
 		}
 	}
@@ -77,16 +86,19 @@ namespace Rose
  			vertex.Normal.y = mesh->mNormals[i].y;
  			vertex.Normal.z = mesh->mNormals[i].z;
  
+			if (mesh->HasTangentsAndBitangents())
+			{
+				vertex.Tangent.x = mesh->mTangents[i].x;
+				vertex.Tangent.y = mesh->mTangents[i].y;
+				vertex.Tangent.z = mesh->mTangents[i].z;
 
-			vertex.Tangent.x = mesh->mTangents[i].x;
-			vertex.Tangent.y = mesh->mTangents[i].y;
-			vertex.Tangent.z = mesh->mTangents[i].z;
+				vertex.Binormal.x = mesh->mBitangents[i].x;
+				vertex.Binormal.y = mesh->mBitangents[i].y;
+				vertex.Binormal.z = mesh->mBitangents[i].z;
+			}
 
-			vertex.Bitangent.x = mesh->mBitangents[i].x;
-			vertex.Bitangent.y = mesh->mBitangents[i].y;
-			vertex.Bitangent.z = mesh->mBitangents[i].z;
 
-			if (mesh->mTextureCoords[0])
+			if (mesh->HasTextureCoords(0))
 			{
 				vertex.TexCoord.x = mesh->mTextureCoords[0][i].x;
 				vertex.TexCoord.y = mesh->mTextureCoords[0][i].y;
@@ -115,15 +127,35 @@ namespace Rose
 
 			aiMaterial* material = scene->mMaterials[mesh->mMaterialIndex];
 
-			auto specMaps = LoadTextures(material, aiTextureType_SPECULAR);
-			result.Uniforms.insert(result.Uniforms.end(), specMaps.begin(), specMaps.end());
+			auto diffMaps = LoadTextures(material, aiTextureType_DIFFUSE);
+			result.Uniforms.insert(result.Uniforms.end(), diffMaps.begin(), diffMaps.end());
+
 
 			auto normMaps = LoadTextures(material, aiTextureType_NORMALS);
 			result.Uniforms.insert(result.Uniforms.end(), normMaps.begin(), normMaps.end());
 
-			auto diffMaps = LoadTextures(material, aiTextureType_DIFFUSE);
-			result.Uniforms.insert(result.Uniforms.end(), diffMaps.begin(), diffMaps.end());
+			auto metalMaps = LoadTextures(material, aiTextureType_METALNESS);
+			result.Uniforms.insert(result.Uniforms.end(), metalMaps.begin(), metalMaps.end());
 
+			auto roughMaps = LoadTextures(material, aiTextureType_SHININESS);
+			result.Uniforms.insert(result.Uniforms.end(), roughMaps.begin(), roughMaps.end());
+
+			MaterialUniform irr;
+			irr.Texture3DCube = EnviormentTexture::GetIrradianceMap();
+			irr.TextureType = PBRTextureType::Irr;
+			result.Uniforms.insert(result.Uniforms.end(), irr);
+
+
+			MaterialUniform rad;
+			rad.Texture3DCube = EnviormentTexture::GetRadienceMap();
+			rad.TextureType = PBRTextureType::Rad;
+			result.Uniforms.insert(result.Uniforms.end(), rad);
+
+
+			MaterialUniform specBRDF;
+			specBRDF.Texture = EnviormentTexture::GetSpecularBRDF();
+			specBRDF.TextureType = PBRTextureType::SpecBRDF;
+			result.Uniforms.insert(result.Uniforms.end(), specBRDF);
 
 		
 			ShaderAttributeLayout layout =
@@ -131,7 +163,7 @@ namespace Rose
 				{"a_Position", 0, ShaderMemberType::Float3},
 				{"a_Normal", 1, ShaderMemberType::Float3},
 				{"a_Tangent", 2, ShaderMemberType::Float3},
-				{"a_Bitangent", 3, ShaderMemberType::Float3},
+				{"a_Binormal", 3, ShaderMemberType::Float3},
 				{"a_TexCoord", 4, ShaderMemberType::Float2}
 			};
 
@@ -162,7 +194,10 @@ namespace Rose
 				uniform.TextureType = PBRTextureType::Specular;
 			else if (type == aiTextureType_NORMALS)
 				uniform.TextureType = PBRTextureType::Normal;
-
+			else if (type == aiTextureType_METALNESS)
+				uniform.TextureType = PBRTextureType::Metal;
+			else if (type == aiTextureType_DIFFUSE_ROUGHNESS || type == aiTextureType_SHININESS)
+				uniform.TextureType = PBRTextureType::Rough;
 
 			aiString str;
 			mat->GetTexture(type, i, &str);
@@ -174,6 +209,26 @@ namespace Rose
 			props.IsNormalMap = (type == aiTextureType_NORMALS);
 
 			uniform.Texture = std::make_shared<Texture2D>(modelParentPath.string() + std::string("/") +std::string(str.C_Str()), props);
+
+			result.push_back(uniform);
+		}
+
+		if (!result.size())
+		{
+			MaterialUniform uniform;
+
+			if (type == aiTextureType_DIFFUSE)
+				uniform.TextureType = PBRTextureType::Albedo;
+			else if (type == aiTextureType_SPECULAR)
+				uniform.TextureType = PBRTextureType::Specular;
+			else if (type == aiTextureType_NORMALS)
+				uniform.TextureType = PBRTextureType::Normal;
+			else if (type == aiTextureType_METALNESS)
+				uniform.TextureType = PBRTextureType::Metal;
+			else if (type == aiTextureType_DIFFUSE_ROUGHNESS || type == aiTextureType_SHININESS)
+				uniform.TextureType = PBRTextureType::Rough;
+
+			uniform.Texture = Material::DefaultWhiteTexture();
 
 			result.push_back(uniform);
 		}
