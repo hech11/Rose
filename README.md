@@ -71,7 +71,7 @@ Everything should build properly.
 ## GPU support
 | AMD | Nvidia | Intel |
 | --- | --- | --- |
-| :heavy_check_mark: | :grey_question: | :heavy_check_mark: |
+| :heavy_check_mark: | :grey_question: | :grey_question: |
 <blockquote>
 I do not have access to a Nvidia GPU and an Intel GPU that supports Vulkan so I cannot verify how stable builds that use those GPUs will be.
 </blockquote>
